@@ -1,0 +1,18 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  profiles:
+    default: local
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  jackson:
+    time-zone: UTC
+logging:
+  level:
+    org.springframework.boot.context.config: DEBUG

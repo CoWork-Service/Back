@@ -1,0 +1,15 @@
+spring:
+  config:
+    import: optional:file:/opt/hack/.env[.properties]
+  datasource:
+    url: ${MYSQL_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
+    properties:
+      hibernate:
+        show_sql: false
+

@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE}?serverTimezone=UTC&characterEncoding=UTF-8
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
+    properties:
+      hibernate:
+        show_sql: false
