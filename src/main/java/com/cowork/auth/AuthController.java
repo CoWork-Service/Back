@@ -6,12 +6,15 @@ import com.cowork.auth.dto.TokenResponse;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -20,6 +23,15 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserRepository userRepository;
+    private final com.cowork.auth.SsoService ssoService;
+    @GetMapping("/sso/callback")
+    public void ssoCallback(
+            @RequestParam String sToken,
+            @RequestParam String sIdno,
+            HttpServletResponse response) throws IOException {
+        String redirectUrl = ssoService.handleSsoCallback(sToken, sIdno);
+        response.sendRedirect(redirectUrl);
+    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<TokenResponse>> register(@Valid @RequestBody RegisterRequest req) {

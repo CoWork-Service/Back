@@ -47,3 +47,6 @@ springdoc:
 logging:
   level:
     org.springframework.boot.context.config: DEBUG
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
