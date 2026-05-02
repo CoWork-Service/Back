@@ -35,7 +35,7 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/sso/callback").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/sso/callback", "/api/auth/sso/profile","/api/auth/sso/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/surveys/*/respond").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/timetables/*/respond").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/mobile/sessions/*").permitAll()
