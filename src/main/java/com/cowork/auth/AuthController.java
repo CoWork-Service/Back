@@ -2,10 +2,12 @@ package com.cowork.auth;
 
 import com.cowork.auth.dto.LoginRequest;
 import com.cowork.auth.dto.RegisterRequest;
+import com.cowork.auth.dto.SsoProfileResponse;
 import com.cowork.auth.dto.TokenResponse;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import com.cowork.auth.dto.SsoRegisterRequest;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -20,7 +24,19 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserRepository userRepository;
-
+    private final com.cowork.auth.SsoService ssoService;
+    @GetMapping("/sso/callback")
+    public void ssoCallback(
+            @RequestParam String sToken,
+            @RequestParam String sIdno,
+            HttpServletResponse response) throws IOException {
+        String redirectUrl = ssoService.handleSsoCallback(sToken, sIdno);
+        response.sendRedirect(redirectUrl);
+    }
+    @GetMapping("/sso/profile")
+    public ResponseEntity<ApiResponse<SsoProfileResponse>> getSsoProfile(@RequestParam String tempToken) {
+        return ResponseEntity.ok(ApiResponse.ok(ssoService.getSsoProfile(tempToken)));
+    }
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<TokenResponse>> register(@Valid @RequestBody RegisterRequest req) {
         return ResponseEntity.ok(ApiResponse.ok(authService.register(req)));
@@ -48,6 +64,10 @@ public class AuthController {
         User user = userRepository.findById(userId).orElseThrow();
         return ResponseEntity.ok(ApiResponse.ok(new MeResponse(user.getId(), user.getName(), user.getEmail(),
                 user.getOrganization().getId(), user.getOrganization().getName())));
+    }
+    @PostMapping("/sso/register")
+    public ResponseEntity<ApiResponse<TokenResponse>> ssoRegister(@RequestBody SsoRegisterRequest req) {
+        return ResponseEntity.ok(ApiResponse.ok(ssoService.ssoRegister(req)));
     }
 
     @lombok.Getter

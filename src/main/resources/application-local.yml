@@ -10,3 +10,6 @@ spring:
     properties:
       hibernate:
         show_sql: false
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  sso-temp-token-expiry: 300

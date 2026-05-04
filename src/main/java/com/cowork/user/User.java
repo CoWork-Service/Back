@@ -22,6 +22,9 @@ public class User {
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
 
+    @Column(name = "student_id", length = 20)
+    private String studentId;
+
     @Column(nullable = false, unique = true, length = 200)
     private String email;
 
@@ -66,5 +69,9 @@ public class User {
 
     public boolean isActive() {
         return this.joinStatus == JoinStatus.ACTIVE;
+    }
+
+    public void reject() {
+        this.joinStatus = JoinStatus.REJECTED;
     }
 }
