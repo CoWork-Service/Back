@@ -6,7 +6,7 @@ import lombok.Getter;
 public class SsoRegisterRequest {
     private String tempToken;
     private String email;
-    private boolean isCouncilMember;
+    private boolean councilMember;
     private String cohortLabel;
     private String department;
 }

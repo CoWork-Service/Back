@@ -1,3 +1,6 @@
+네! 이번에 추가된 내용을 기존 형식에 맞게 써드릴게요:
+
+```markdown
 ## 🔐 SSO 로그인 흐름
 
 ### 1. SSO 로그인 페이지 이동
@@ -38,22 +41,55 @@ POST /api/auth/sso/register
 {
   "tempToken": "xxxx",
   "email": "abc@ssu.ac.kr",
-  "isCouncilMember": false,
+  "councilMember": false,
   "cohortLabel": "1기",
   "department": "AI소프트웨어학부"
 }
 ```
 - 가입 후 `PENDING` 상태로 생성
 - 관리자 승인 후 `ACTIVE`로 변경
-  UPDATE users SET join_status = 'ACTIVE' WHERE student_id = '20221844'; 실행 예시 cmd mysql터미널
-- 다음 SSO 로그인부터 JWT 발급
-  재로그인시 accessToken, RefreshToken 발급
+- 다음 SSO 로그인부터 JWT 발급 (accessToken, refreshToken 발급)
 
+### 6. 관리자 승인
+PENDING 유저 목록 조회:
+GET /api/admin/users/pending
+- Headers: `Authorization: Bearer {accessToken}`
 
-기존 파일 수정한 것들
-User.java → studentId 필드 추가
-Organization.java → department 필드 추가
-AuthController.java → 엔드포인트 추가
-SecurityConfig.java → 경로 허용 추가
-UserRepository.java → findByStudentId 추가
-OrganizationRepository.java → findByDepartment 추가
+유저 승인:
+PATCH /api/admin/users/{userId}/approve
+- Headers: `Authorization: Bearer {accessToken}`
+
+유저 거절:
+PATCH /api/admin/users/{userId}/reject
+- Headers: `Authorization: Bearer {accessToken}`
+
+---
+
+## 📝 변경된 파일 목록
+
+### 새로 추가된 파일
+| 파일 | 설명 |
+|------|------|
+| `auth/SsoService.java` | SSO 로그인 처리 및 SAINT 재검증 로직 |
+| `auth/SsoTempToken.java` | 온보딩용 임시 토큰 Entity |
+| `auth/SsoTempTokenRepository.java` | 임시 토큰 Repository |
+| `auth/dto/SsoProfileResponse.java` | SSO 프로필 응답 DTO |
+| `auth/dto/SsoRegisterRequest.java` | SSO 회원가입 요청 DTO |
+| `user/AdminController.java` | 관리자 승인/거절 API |
+| `user/AdminService.java` | 관리자 승인/거절 비즈니스 로직 |
+| `db/migration/V2__add_student_id.sql` | users 테이블 student_id 컬럼 추가 |
+| `db/migration/V3__add_sso_temp_tokens.sql` | sso_temp_tokens 테이블 생성 |
+| `db/migration/V4__add_organization_department.sql` | organizations 테이블 department 컬럼 추가 |
+
+### 기존 파일 수정
+| 파일 | 수정 내용 |
+|------|---------|
+| `user/User.java` | `studentId` 필드 추가 |
+| `user/JoinStatus.java` | `REJECTED` 상태 추가 |
+| `user/UserRepository.java` | `findByStudentId`, `findByJoinStatusWithOrganization` 추가 |
+| `organization/Organization.java` | `department` 필드 추가 |
+| `organization/OrganizationRepository.java` | `findByDepartment` 추가 |
+| `auth/AuthController.java` | SSO 콜백, 프로필 조회, 회원가입 엔드포인트 추가 |
+| `config/SecurityConfig.java` | SSO 및 관리자 경로 허용 추가 |
+| `build.gradle` | `jsoup` 라이브러리 추가 |
+```

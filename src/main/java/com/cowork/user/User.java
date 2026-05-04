@@ -70,4 +70,8 @@ public class User {
     public boolean isActive() {
         return this.joinStatus == JoinStatus.ACTIVE;
     }
+
+    public void reject() {
+        this.joinStatus = JoinStatus.REJECTED;
+    }
 }
