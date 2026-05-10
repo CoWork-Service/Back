@@ -37,6 +37,10 @@ public class Organization {
     @Column(nullable = false, length = 100)
     private String name;
 
+    /** SSO 프로필의 소속 학과/학부. 초대코드 없이 가입할 때 학생회 탐색에 사용한다. */
+    @Column(length = 100)
+    private String department;
+
     /**
      * 초대 코드
      * - 신규 사용자가 회원가입할 때 이 코드를 입력하면 해당 조직에 소속된다.

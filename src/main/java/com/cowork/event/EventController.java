@@ -372,7 +372,7 @@ public class EventController {
         static EventSummaryResponse of(CoworkEvent event) {
             return new EventSummaryResponse(
                     event.getId(), event.getCohortId(), event.getName(), event.getCategory(),
-                    event.getStatus().name(), event.getDescription(), event.getStartDate(),
+                    event.getStatus().toJson(), event.getDescription(), event.getStartDate(),
                     event.getEndDate(), event.getLocation(),
                     event.getLeadDepartment() != null ? event.getLeadDepartment().name() : null,
                     event.getOrganizers(), event.getBudget(), event.getCoverColor(),
@@ -396,11 +396,12 @@ public class EventController {
         }
     }
 
-    record EventPhotoResponse(Long id, String storagePath, String photoUrl, String caption, String tag,
+    record EventPhotoResponse(Long id, String storagePath, String photoUrl, String url, String caption, String tag,
                               Long uploadedBy, LocalDateTime uploadedAt) {
         static EventPhotoResponse of(EventPhoto photo) {
+            String photoUrl = "/uploads/" + photo.getStoragePath();
             return new EventPhotoResponse(
-                    photo.getId(), photo.getStoragePath(), "/uploads/" + photo.getStoragePath(),
+                    photo.getId(), photo.getStoragePath(), photoUrl, photoUrl,
                     photo.getCaption(), photo.getTag(), photo.getUploadedBy(), photo.getUploadedAt()
             );
         }

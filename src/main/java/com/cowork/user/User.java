@@ -49,6 +49,10 @@ public class User {
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
 
+    /** 숭실대 SSO에서 내려온 학번. 기존 이메일 가입 사용자는 null 일 수 있다. */
+    @Column(name = "student_id", unique = true, length = 20)
+    private String studentId;
+
     /** 로그인 이메일 (고유값, 중복 불가) */
     @Column(nullable = false, unique = true, length = 200)
     private String email;

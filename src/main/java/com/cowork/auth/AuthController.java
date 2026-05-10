@@ -2,6 +2,8 @@ package com.cowork.auth;
 
 import com.cowork.auth.dto.LoginRequest;
 import com.cowork.auth.dto.RegisterRequest;
+import com.cowork.auth.dto.SsoProfileResponse;
+import com.cowork.auth.dto.SsoRegisterRequest;
 import com.cowork.auth.dto.TokenResponse;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
@@ -13,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +30,29 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final SsoService ssoService;
     private final UserRepository userRepository;
+
+    @Operation(summary = "숭실대 SSO 콜백", description = "SmartID SSO 인증 성공 후 sToken/sIdno를 받아 프론트로 리다이렉트합니다.")
+    @GetMapping("/sso/callback")
+    public void ssoCallback(
+            @RequestParam(required = false) String sToken,
+            @RequestParam(required = false) String sIdno,
+            HttpServletResponse response) throws java.io.IOException {
+        response.sendRedirect(ssoService.handleSsoCallback(sToken, sIdno));
+    }
+
+    @Operation(summary = "SSO 신규 사용자 프로필 조회", description = "SSO 콜백에서 발급된 tempToken으로 학생 프로필을 조회합니다.")
+    @GetMapping("/sso/profile")
+    public ResponseEntity<ApiResponse<SsoProfileResponse>> ssoProfile(@RequestParam String tempToken) {
+        return ResponseEntity.ok(ApiResponse.ok(ssoService.getSsoProfile(tempToken)));
+    }
+
+    @Operation(summary = "SSO 온보딩 가입", description = "SSO 신규 사용자가 학생회를 생성하거나 기존 학생회에 가입 신청합니다.")
+    @PostMapping("/sso/register")
+    public ResponseEntity<ApiResponse<TokenResponse>> ssoRegister(@RequestBody SsoRegisterRequest req) {
+        return ResponseEntity.ok(ApiResponse.ok(ssoService.ssoRegister(req)));
+    }
 
     @Operation(
             summary = "회원가입",

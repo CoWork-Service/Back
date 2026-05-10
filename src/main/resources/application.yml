@@ -47,3 +47,8 @@ springdoc:
 logging:
   level:
     org.springframework.boot.context.config: DEBUG
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  sso-temp-token-expiry: ${SSO_TEMP_TOKEN_EXPIRY:300}
+  sso-allow-unverified-fallback: ${SSO_ALLOW_UNVERIFIED_FALLBACK:false}

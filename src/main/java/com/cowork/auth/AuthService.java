@@ -137,7 +137,7 @@ public class AuthService {
         refreshTokenRepository.deleteByUser(user);
     }
 
-    private TokenResponse issueTokens(User user) {
+    public TokenResponse issueTokens(User user) {
         // 기존 refresh token 제거
         refreshTokenRepository.deleteByUser(user);
 

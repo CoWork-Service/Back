@@ -15,6 +15,9 @@ public enum ErrorCode {
     INVALID_INVITE_CODE(400, "유효하지 않은 초대 코드입니다"),
     PENDING_APPROVAL(403, "관리자 승인 대기 중입니다"),
     DUPLICATE_EMAIL(409, "이미 사용 중인 이메일입니다"),
+    DUPLICATE_STUDENT_ID(409, "이미 가입된 학번입니다"),
+    INVALID_SSO_TOKEN(401, "유효하지 않은 SSO 인증 정보입니다"),
+    EXPIRED_SSO_TOKEN(401, "만료된 SSO 인증 정보입니다"),
 
     // General
     NOT_FOUND(404, "리소스를 찾을 수 없습니다"),
