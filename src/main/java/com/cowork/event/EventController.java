@@ -7,6 +7,13 @@ import com.cowork.schedule.Timetable;
 import com.cowork.survey.Survey;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,20 +27,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * 행사 관리 컨트롤러 (EventController)
- *
- * 역할:
- *   코호트의 행사(축제·발표회·워크숍 등)를 관리하는 API 를 제공한다.
- *   기본 경로: /api/events
- *
- * 주요 기능:
- *   - 행사 CRUD
- *   - 행사 사진 업로드·삭제
- *   - 행사 상세 조회 시 사진·지출·설문·일정조율표가 함께 반환됨
- *
- * 인증 필요: 모든 엔드포인트에 JWT Access Token 필요
- */
+@Tag(name = "Event", description = "행사 관리 API — 행사 CRUD, 사진 업로드/삭제, 연관 지출·설문·타임테이블 조회")
+@SecurityRequirement(name = "Bearer Authentication")
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
@@ -42,172 +37,318 @@ public class EventController {
     private final EventService eventService;
     private final UserRepository userRepository;
 
-    /**
-     * 행사 목록 조회
-     *
-     * 동작: cohortId 기준으로 행사 목록을 조회하며, 상태·분류로 필터링 가능.
-     * 사용 시점: 행사 목록 화면 또는 캘린더에서 행사를 표시할 때.
-     *
-     * @param cohortId 필수. 조회할 코호트 ID
-     * @param status   선택. 행사 상태 필터 (PLANNING / IN_PROGRESS / COMPLETED / CANCELLED)
-     * @param category 선택. 분류 필터 (예: "축제")
-     * @return 행사 목록 (요약 정보)
-     */
+    @Operation(
+            summary = "행사 목록 조회",
+            description = """
+                    코호트의 행사 목록을 조회합니다.
+
+                    **사용 시점:** 행사 목록 화면 또는 캘린더에서 행사를 표시할 때.
+
+                    **상태(status) 값:**
+                    - `PLANNING` — 기획 중
+                    - `IN_PROGRESS` — 진행 중
+                    - `COMPLETED` — 완료
+                    - `CANCELLED` — 취소
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "행사 목록 조회 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "data": [
+                                        {
+                                          "id": 1,
+                                          "cohortId": 5,
+                                          "name": "2025 MT",
+                                          "category": "MT",
+                                          "status": "PLANNING",
+                                          "description": "3월 엠티 일정",
+                                          "startDate": "2025-03-14",
+                                          "endDate": "2025-03-15",
+                                          "location": "가평",
+                                          "leadDepartment": "PLANNING",
+                                          "organizers": ["홍길동", "이철수"],
+                                          "budget": 1500000,
+                                          "coverColor": "#3B82F6",
+                                          "createdBy": 1,
+                                          "createdAt": "2025-02-20T10:00:00",
+                                          "updatedAt": "2025-02-20T10:00:00"
+                                        }
+                                      ],
+                                      "message": null,
+                                      "code": null
+                                    }
+                                    """)))
+    })
     @GetMapping
     public ResponseEntity<ApiResponse<List<EventSummaryResponse>>> getEvents(
-            @RequestParam Long cohortId,
-            @RequestParam(required = false) EventStatus status,
-            @RequestParam(required = false) String category) {
+            @Parameter(description = "코호트 ID (필수)", required = true, example = "5") @RequestParam Long cohortId,
+            @Parameter(description = "행사 상태 필터 (PLANNING / IN_PROGRESS / COMPLETED / CANCELLED)", example = "PLANNING") @RequestParam(required = false) EventStatus status,
+            @Parameter(description = "분류 필터 (예: MT, 축제, 발표회)", example = "MT") @RequestParam(required = false) String category) {
         List<EventSummaryResponse> events = eventService.getEvents(cohortId, status, category).stream()
                 .map(EventSummaryResponse::of)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(events));
     }
 
-    /**
-     * 행사 생성
-     *
-     * 동작: 새 행사를 생성한다. 생성자(createdBy)는 JWT 토큰에서 자동으로 설정된다.
-     * 사용 시점: 새 행사를 기획할 때.
-     *
-     * @param request     행사 정보 (name, category, status, description, startDate, endDate,
-     *                    location, leadDepartment, organizers, budget, coverColor, cohortId)
-     * @param userDetails 현재 로그인 사용자 (생성자)
-     * @return 생성된 행사 상세 정보
-     */
+    @Operation(
+            summary = "행사 생성",
+            description = """
+                    새 행사를 생성합니다. 생성자는 JWT 토큰에서 자동으로 설정됩니다.
+
+                    **사용 시점:** 새 행사를 기획할 때.
+
+                    **상태(status) 초기값:** `PLANNING` 권장
+
+                    **부서(leadDepartment) 값:** PLANNING / MARKETING / OPERATION / FINANCE / GENERAL
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "행사 생성 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "data": {
+                                        "event": {
+                                          "id": 2,
+                                          "cohortId": 5,
+                                          "name": "종강 파티",
+                                          "category": "파티",
+                                          "status": "PLANNING",
+                                          "description": "1학기 종강 기념 파티",
+                                          "startDate": "2025-06-20",
+                                          "endDate": "2025-06-20",
+                                          "location": "동아리방",
+                                          "leadDepartment": "OPERATION",
+                                          "organizers": ["박지훈"],
+                                          "budget": 300000,
+                                          "coverColor": "#F59E0B",
+                                          "createdBy": 1,
+                                          "createdAt": "2025-05-10T09:00:00",
+                                          "updatedAt": "2025-05-10T09:00:00"
+                                        },
+                                        "photos": [],
+                                        "expenses": [],
+                                        "surveys": [],
+                                        "timetables": []
+                                      },
+                                      "message": null,
+                                      "code": null
+                                    }
+                                    """)))
+    })
     @PostMapping
     public ResponseEntity<ApiResponse<EventDetailResponse>> createEvent(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "행사 생성 요청",
+                    required = true,
+                    content = @Content(examples = @ExampleObject(value = """
+                            {
+                              "cohortId": 5,
+                              "name": "종강 파티",
+                              "category": "파티",
+                              "status": "PLANNING",
+                              "description": "1학기 종강 기념 파티",
+                              "startDate": "2025-06-20",
+                              "endDate": "2025-06-20",
+                              "location": "동아리방",
+                              "leadDepartment": "OPERATION",
+                              "organizers": ["박지훈"],
+                              "budget": 300000,
+                              "coverColor": "#F59E0B"
+                            }
+                            """)))
             @RequestBody EventRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = getUser(userDetails);
         EventService.EventDetail detail = eventService.createEvent(
-                request.getCohortId(),
-                request.getName(),
-                request.getCategory(),
-                request.getStatus(),
-                request.getDescription(),
-                request.getStartDate(),
-                request.getEndDate(),
-                request.getLocation(),
-                request.getLeadDepartment(),
-                request.getOrganizers(),
-                request.getBudget(),
-                request.getCoverColor(),
-                user.getId()
+                request.getCohortId(), request.getName(), request.getCategory(),
+                request.getStatus(), request.getDescription(), request.getStartDate(),
+                request.getEndDate(), request.getLocation(), request.getLeadDepartment(),
+                request.getOrganizers(), request.getBudget(), request.getCoverColor(), user.getId()
         );
         return ResponseEntity.ok(ApiResponse.ok(EventDetailResponse.of(detail)));
     }
 
-    /**
-     * 행사 상세 조회
-     *
-     * 동작: 행사 기본 정보 + 사진 + 지출 내역 + 설문 + 일정 조율표를 한 번에 반환한다.
-     * 사용 시점: 행사 상세 화면에서 전체 정보를 한 번의 요청으로 불러올 때.
-     *
-     * @param id 행사 ID
-     * @return 행사 + 사진 목록 + 지출 요약 + 설문 목록 + 타임테이블 목록
-     */
+    @Operation(
+            summary = "행사 상세 조회",
+            description = """
+                    행사 기본 정보 + 사진 + 지출 내역 + 설문 + 타임테이블을 한 번에 반환합니다.
+
+                    **사용 시점:** 행사 상세 화면에서 전체 정보를 한 번의 요청으로 불러올 때.
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "행사 상세 조회 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "data": {
+                                        "event": { "id": 1, "name": "2025 MT", "status": "IN_PROGRESS", "..." : "..." },
+                                        "photos": [
+                                          { "id": 3, "storagePath": "events/mt_photo1.jpg", "photoUrl": "/uploads/events/mt_photo1.jpg", "caption": "출발", "tag": "현장", "uploadedBy": 1, "uploadedAt": "2025-03-14T09:00:00" }
+                                        ],
+                                        "expenses": [
+                                          { "id": 1, "date": "2025-03-14", "category": "식비", "vendor": "편의점", "amount": 50000 }
+                                        ],
+                                        "surveys": [
+                                          { "id": 2, "title": "MT 만족도 조사", "status": "OPEN", "createdBy": 1, "createdAt": "2025-03-16T10:00:00" }
+                                        ],
+                                        "timetables": [
+                                          { "id": 1, "title": "MT 날짜 조율", "status": "CLOSED", "createdBy": 1, "createdAt": "2025-02-01T09:00:00" }
+                                        ]
+                                      },
+                                      "message": null,
+                                      "code": null
+                                    }
+                                    """))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "행사를 찾을 수 없음")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<EventDetailResponse>> getEvent(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<EventDetailResponse>> getEvent(
+            @Parameter(description = "행사 ID", required = true, example = "1") @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(EventDetailResponse.of(eventService.getEventDetail(id))));
     }
 
-    /**
-     * 행사 정보 수정
-     *
-     * 동작: 행사의 모든 기본 정보를 수정한다 (상태 변경 포함).
-     * 사용 시점: 행사 편집 폼에서 저장하거나 상태를 변경할 때.
-     *
-     * @param id      행사 ID
-     * @param request 수정할 행사 정보
-     * @return 수정된 행사 상세 정보
-     */
+    @Operation(
+            summary = "행사 정보 수정",
+            description = """
+                    행사의 기본 정보를 수정합니다 (상태 변경 포함).
+
+                    **사용 시점:** 행사 편집 폼에서 저장하거나 상태를 변경할 때.
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "행사 수정 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "행사를 찾을 수 없음")
+    })
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<EventDetailResponse>> updateEvent(
-            @PathVariable Long id,
+            @Parameter(description = "행사 ID", required = true, example = "1") @PathVariable Long id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "행사 수정 요청 (cohortId 제외)",
+                    required = true,
+                    content = @Content(examples = @ExampleObject(value = """
+                            {
+                              "name": "2025 MT (확정)",
+                              "category": "MT",
+                              "status": "IN_PROGRESS",
+                              "description": "3월 엠티 확정",
+                              "startDate": "2025-03-14",
+                              "endDate": "2025-03-15",
+                              "location": "가평 리버빌리지",
+                              "leadDepartment": "PLANNING",
+                              "organizers": ["홍길동", "이철수"],
+                              "budget": 1800000,
+                              "coverColor": "#3B82F6"
+                            }
+                            """)))
             @RequestBody EventRequest request) {
         EventService.EventDetail detail = eventService.updateEvent(
-                id,
-                request.getName(),
-                request.getCategory(),
-                request.getStatus(),
-                request.getDescription(),
-                request.getStartDate(),
-                request.getEndDate(),
-                request.getLocation(),
-                request.getLeadDepartment(),
-                request.getOrganizers(),
-                request.getBudget(),
-                request.getCoverColor()
+                id, request.getName(), request.getCategory(), request.getStatus(),
+                request.getDescription(), request.getStartDate(), request.getEndDate(),
+                request.getLocation(), request.getLeadDepartment(), request.getOrganizers(),
+                request.getBudget(), request.getCoverColor()
         );
         return ResponseEntity.ok(ApiResponse.ok(EventDetailResponse.of(detail)));
     }
 
-    /**
-     * 행사 삭제
-     *
-     * 동작: 행사와 연관된 사진 파일 및 레코드를 삭제한다.
-     * 사용 시점: 취소된 행사를 완전히 제거할 때.
-     *
-     * @param id 행사 ID
-     */
+    @Operation(
+            summary = "행사 삭제",
+            description = """
+                    행사와 연관된 사진 파일 및 레코드를 삭제합니다.
+
+                    **사용 시점:** 취소된 행사를 완전히 제거할 때.
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "행사 삭제 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    { "success": true, "data": null, "message": null, "code": null }
+                                    """))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "행사를 찾을 수 없음")
+    })
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteEvent(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteEvent(
+            @Parameter(description = "행사 ID", required = true, example = "1") @PathVariable Long id) {
         eventService.deleteEvent(id);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 
-    /**
-     * 행사 사진 업로드
-     *
-     * 동작: 행사에 사진을 추가한다. 파일을 스토리지에 저장하고 EventPhoto 레코드를 생성한다.
-     * 사용 시점: 행사 진행 중 또는 후 사진을 등록할 때.
-     *
-     * Content-Type: multipart/form-data
-     * @param id          행사 ID
-     * @param photo       사진 파일
-     * @param caption     선택. 사진 설명
-     * @param tag         선택. 사진 태그 (예: "현장", "준비", "기타")
-     * @param userDetails 현재 로그인 사용자 (업로드자)
-     * @return 생성된 사진 정보 (id, storagePath, photoUrl, caption, tag 등)
-     */
+    @Operation(
+            summary = "행사 사진 업로드",
+            description = """
+                    행사에 사진을 추가합니다.
+
+                    **사용 시점:** 행사 진행 중 또는 후 사진을 등록할 때.
+
+                    **요청 형식:** `multipart/form-data`
+
+                    업로드 후 사진 URL은 `photoUrl` 필드에 포함됩니다 (`/uploads/{storagePath}`).
+
+                    **tag 예시:** "현장", "준비", "기타"
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "사진 업로드 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "success": true,
+                                      "data": {
+                                        "id": 5,
+                                        "storagePath": "events/mt_photo2_20250314.jpg",
+                                        "photoUrl": "/uploads/events/mt_photo2_20250314.jpg",
+                                        "caption": "저녁 식사",
+                                        "tag": "현장",
+                                        "uploadedBy": 1,
+                                        "uploadedAt": "2025-03-14T19:30:00"
+                                      },
+                                      "message": null,
+                                      "code": null
+                                    }
+                                    """)))
+    })
     @PostMapping("/{id}/photos")
     public ResponseEntity<ApiResponse<EventPhotoResponse>> addPhoto(
-            @PathVariable Long id,
-            @RequestParam("photo") MultipartFile photo,
-            @RequestParam(required = false) String caption,
-            @RequestParam(required = false) String tag,
+            @Parameter(description = "행사 ID", required = true, example = "1") @PathVariable Long id,
+            @Parameter(description = "사진 파일 (이미지)", required = true) @RequestParam("photo") MultipartFile photo,
+            @Parameter(description = "사진 설명", example = "저녁 식사") @RequestParam(required = false) String caption,
+            @Parameter(description = "사진 태그 (예: 현장, 준비, 기타)", example = "현장") @RequestParam(required = false) String tag,
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = getUser(userDetails);
         EventPhoto item = eventService.addPhoto(id, photo, caption, tag, user.getId());
         return ResponseEntity.ok(ApiResponse.ok(EventPhotoResponse.of(item)));
     }
 
-    /**
-     * 행사 사진 삭제
-     *
-     * 동작: 사진 파일을 스토리지에서 삭제하고 EventPhoto 레코드를 제거한다.
-     * 사용 시점: 잘못 업로드된 사진이나 부적절한 사진을 제거할 때.
-     *
-     * @param id      행사 ID
-     * @param photoId 삭제할 사진 ID
-     */
+    @Operation(
+            summary = "행사 사진 삭제",
+            description = """
+                    사진 파일을 스토리지에서 삭제하고 레코드를 제거합니다.
+
+                    **사용 시점:** 잘못 업로드된 사진이나 부적절한 사진을 제거할 때.
+                    """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "사진 삭제 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    { "success": true, "data": null, "message": null, "code": null }
+                                    """))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사진을 찾을 수 없음")
+    })
     @DeleteMapping("/{id}/photos/{photoId}")
     public ResponseEntity<ApiResponse<Void>> deletePhoto(
-            @PathVariable Long id,
-            @PathVariable Long photoId) {
+            @Parameter(description = "행사 ID", required = true, example = "1") @PathVariable Long id,
+            @Parameter(description = "삭제할 사진 ID", required = true, example = "5") @PathVariable Long photoId) {
         eventService.deletePhoto(id, photoId);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 
-    /** JWT 의 username(= userId) 로 User 엔티티를 로드하는 내부 헬퍼 */
     private User getUser(UserDetails userDetails) {
         return userRepository.findById(Long.parseLong(userDetails.getUsername())).orElseThrow();
     }
 
     // ─── 요청/응답 DTOs ───────────────────────────────────────────────────────
 
-    /** POST/PUT 행사 요청 바디 */
     @Getter
     static class EventRequest {
         private Long cohortId;
@@ -224,34 +365,22 @@ public class EventController {
         private String coverColor;
     }
 
-    /** 행사 요약 응답 DTO (목록용) */
     record EventSummaryResponse(Long id, Long cohortId, String name, String category, String status,
                                 String description, LocalDate startDate, LocalDate endDate, String location,
                                 String leadDepartment, List<String> organizers, Long budget, String coverColor,
                                 Long createdBy, LocalDateTime createdAt, LocalDateTime updatedAt) {
         static EventSummaryResponse of(CoworkEvent event) {
             return new EventSummaryResponse(
-                    event.getId(),
-                    event.getCohortId(),
-                    event.getName(),
-                    event.getCategory(),
-                    event.getStatus().name(),
-                    event.getDescription(),
-                    event.getStartDate(),
-                    event.getEndDate(),
-                    event.getLocation(),
+                    event.getId(), event.getCohortId(), event.getName(), event.getCategory(),
+                    event.getStatus().name(), event.getDescription(), event.getStartDate(),
+                    event.getEndDate(), event.getLocation(),
                     event.getLeadDepartment() != null ? event.getLeadDepartment().name() : null,
-                    event.getOrganizers(),
-                    event.getBudget(),
-                    event.getCoverColor(),
-                    event.getCreatedBy(),
-                    event.getCreatedAt(),
-                    event.getUpdatedAt()
+                    event.getOrganizers(), event.getBudget(), event.getCoverColor(),
+                    event.getCreatedBy(), event.getCreatedAt(), event.getUpdatedAt()
             );
         }
     }
 
-    /** 행사 상세 응답 DTO (사진·지출·설문·타임테이블 포함) */
     record EventDetailResponse(EventSummaryResponse event, List<EventPhotoResponse> photos,
                                List<ExpenseSummaryResponse> expenses,
                                List<LinkedSurveyResponse> surveys,
@@ -267,37 +396,28 @@ public class EventController {
         }
     }
 
-    /** 사진 응답 DTO — photoUrl 은 "/uploads/" + storagePath 로 구성 */
     record EventPhotoResponse(Long id, String storagePath, String photoUrl, String caption, String tag,
                               Long uploadedBy, LocalDateTime uploadedAt) {
         static EventPhotoResponse of(EventPhoto photo) {
             return new EventPhotoResponse(
-                    photo.getId(),
-                    photo.getStoragePath(),
-                    "/uploads/" + photo.getStoragePath(),
-                    photo.getCaption(),
-                    photo.getTag(),
-                    photo.getUploadedBy(),
-                    photo.getUploadedAt()
+                    photo.getId(), photo.getStoragePath(), "/uploads/" + photo.getStoragePath(),
+                    photo.getCaption(), photo.getTag(), photo.getUploadedBy(), photo.getUploadedAt()
             );
         }
     }
 
-    /** 행사에 연결된 지출 요약 DTO */
     record ExpenseSummaryResponse(Long id, LocalDate date, String category, String vendor, Long amount) {
         static ExpenseSummaryResponse of(Expense expense) {
             return new ExpenseSummaryResponse(expense.getId(), expense.getDate(), expense.getCategory(), expense.getVendor(), expense.getAmount());
         }
     }
 
-    /** 행사에 연결된 설문 요약 DTO */
     record LinkedSurveyResponse(Long id, String title, String status, Long createdBy, LocalDateTime createdAt) {
         static LinkedSurveyResponse of(Survey survey) {
             return new LinkedSurveyResponse(survey.getId(), survey.getTitle(), survey.getStatus().name(), survey.getCreatedBy(), survey.getCreatedAt());
         }
     }
 
-    /** 행사에 연결된 타임테이블 요약 DTO */
     record LinkedTimetableResponse(Long id, String title, String status, Long createdBy, LocalDateTime createdAt) {
         static LinkedTimetableResponse of(Timetable timetable) {
             return new LinkedTimetableResponse(timetable.getId(), timetable.getTitle(), timetable.getStatus().name(), timetable.getCreatedBy(), timetable.getCreatedAt());
