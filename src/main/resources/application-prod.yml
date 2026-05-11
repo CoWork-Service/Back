@@ -1,6 +1,6 @@
 spring:
   config:
-    import: optional:file:/opt/hack/.env[.properties]
+    import: optional:file:/app/.env[.properties]
   datasource:
     url: ${MYSQL_URL}
     username: ${MYSQL_USERNAME}

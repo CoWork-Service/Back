@@ -1,0 +1,14 @@
+.git
+.github
+.gradle
+.gradle-home
+build/*
+!build/libs/
+!build/libs/*.jar
+README.md
+src
+gradle
+gradlew
+gradlew.bat
+*.pem
+.env

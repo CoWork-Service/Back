@@ -1,8 +1,10 @@
 services:
   app:
-    image: ${APP_IMAGE}
-
-    container_name: hack-spring
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${APP_IMAGE:-cowork-backend:latest}
+    container_name: ${APP_CONTAINER_NAME:-cowork-backend}
     depends_on:
       mysql:
         condition: service_healthy
@@ -19,4 +21,10 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
     ports:
       - "8080:8080"
+    volumes:
+      - ./.env:/app/.env:ro
+      - app_uploads:/app/uploads
     restart: unless-stopped
+
+volumes:
+  app_uploads:
