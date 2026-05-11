@@ -99,10 +99,11 @@ jobs:
         if: steps.deployment_secrets.outputs.ready == 'true'
         shell: bash
         run: |
-          ssh -i ~/.ssh/cowork-backend-key.pem \
-            -o StrictHostKeyChecking=accept-new \
-            -o ConnectTimeout=30 \
-            "$EC2_USER@$EC2_HOST" << 'EOF'
+          for attempt in {1..5}; do
+            if ssh -i ~/.ssh/cowork-backend-key.pem \
+              -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=45 \
+              "$EC2_USER@$EC2_HOST" << 'EOF'
             set -euo pipefail
 
             if ! command -v docker >/dev/null 2>&1; then
@@ -125,27 +126,49 @@ jobs:
             sudo mkdir -p /opt/cowork/backend
             sudo chown -R "$USER:$USER" /opt/cowork
           EOF
+            then
+              exit 0
+            fi
+            echo "SSH bootstrap attempt ${attempt} failed; retrying..."
+            sleep 20
+          done
+          exit 1
 
       - name: Upload deployment bundle
         if: steps.deployment_secrets.outputs.ready == 'true'
         shell: bash
         run: |
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/cowork-backend-key.pem -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30" \
-            deploy/ "$EC2_USER@$EC2_HOST:$DEPLOY_PATH/"
+          for attempt in {1..5}; do
+            if rsync -az --delete \
+              -e "ssh -i ~/.ssh/cowork-backend-key.pem -o StrictHostKeyChecking=accept-new -o ConnectTimeout=45" \
+              deploy/ "$EC2_USER@$EC2_HOST:$DEPLOY_PATH/"; then
+              exit 0
+            fi
+            echo "rsync attempt ${attempt} failed; retrying..."
+            sleep 20
+          done
+          exit 1
 
       - name: Restart backend
         if: steps.deployment_secrets.outputs.ready == 'true'
         timeout-minutes: 8
         shell: bash
         run: |
-          ssh -i ~/.ssh/cowork-backend-key.pem \
-            -o StrictHostKeyChecking=accept-new \
-            -o ConnectTimeout=30 \
-            "$EC2_USER@$EC2_HOST" << EOF
+          for attempt in {1..5}; do
+            if ssh -i ~/.ssh/cowork-backend-key.pem \
+              -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=45 \
+              "$EC2_USER@$EC2_HOST" << EOF
             set -euo pipefail
             cd "$DEPLOY_PATH"
             sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
             sudo docker image prune -f
             sudo docker compose -f docker-compose.yml -f docker-compose.app.yml ps
           EOF
+            then
+              exit 0
+            fi
+            echo "backend restart attempt ${attempt} failed; retrying..."
+            sleep 20
+          done
+          exit 1
