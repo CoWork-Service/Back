@@ -45,10 +45,7 @@ jobs:
             const commitLines = commits.slice(0, 10).map((commit) => {
               const sha = (commit.id || '').slice(0, 7);
               const message = truncate((commit.message || '').split('\n')[0], 140);
-              const author = commit.author?.name || 'unknown';
-              const committer = commit.committer?.name || author;
-              const people = author === committer ? author : `${author}, committed by ${committer}`;
-              return `[\`${sha}\`](${commit.url}) ${message} - ${people}`;
+              return `[\`${sha}\`](${commit.url}) ${message}`;
             });
 
             if (commits.length > 10) {
