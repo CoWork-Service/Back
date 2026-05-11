@@ -17,6 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${file.storage.base-path:./uploads}")
     private String basePath;
 
+    @Value("${file.storage.type:local}")
+    private String storageType;
+
     @Value("${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173,https://front-eosin-nu.vercel.app}")
     private String corsAllowedOriginPatterns;
 
@@ -40,6 +43,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        if (!"local".equalsIgnoreCase(storageType)) {
+            return;
+        }
         String absolutePath = Paths.get(basePath).toAbsolutePath().normalize().toUri().toString();
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(absolutePath);

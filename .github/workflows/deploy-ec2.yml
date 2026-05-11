@@ -19,6 +19,11 @@ env:
   EC2_USER: ${{ secrets.EC2_USER }}
   EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
   BACKEND_ENV: ${{ secrets.BACKEND_ENV }}
+  FILE_STORAGE_TYPE: ${{ secrets.FILE_STORAGE_TYPE }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
   deploy:
@@ -34,6 +39,11 @@ jobs:
           if [ -z "$EC2_USER" ]; then missing+=("EC2_USER"); fi
           if [ -z "$EC2_SSH_KEY" ]; then missing+=("EC2_SSH_KEY"); fi
           if [ -z "$BACKEND_ENV" ]; then missing+=("BACKEND_ENV"); fi
+          if [ -z "$FILE_STORAGE_TYPE" ]; then missing+=("FILE_STORAGE_TYPE"); fi
+          if [ -z "$AWS_REGION" ]; then missing+=("AWS_REGION"); fi
+          if [ -z "$AWS_S3_BUCKET" ]; then missing+=("AWS_S3_BUCKET"); fi
+          if [ -z "$AWS_ACCESS_KEY_ID" ]; then missing+=("AWS_ACCESS_KEY_ID"); fi
+          if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then missing+=("AWS_SECRET_ACCESS_KEY"); fi
 
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::warning::Skipping EC2 deployment. Missing secrets: ${missing[*]}"
@@ -67,7 +77,14 @@ jobs:
           mkdir -p deploy/build/libs
           cp Dockerfile docker-compose.yml docker-compose.app.yml deploy/
           cp build/libs/*.jar deploy/build/libs/app.jar
-          printf '%s' "$BACKEND_ENV" > deploy/.env
+          {
+            printf '%s\n' "$BACKEND_ENV"
+            printf 'FILE_STORAGE_TYPE=%s\n' "$FILE_STORAGE_TYPE"
+            printf 'AWS_REGION=%s\n' "$AWS_REGION"
+            printf 'AWS_S3_BUCKET=%s\n' "$AWS_S3_BUCKET"
+            printf 'AWS_ACCESS_KEY_ID=%s\n' "$AWS_ACCESS_KEY_ID"
+            printf 'AWS_SECRET_ACCESS_KEY=%s\n' "$AWS_SECRET_ACCESS_KEY"
+          } > deploy/.env
 
       - name: Setup SSH key
         if: steps.deployment_secrets.outputs.ready == 'true'

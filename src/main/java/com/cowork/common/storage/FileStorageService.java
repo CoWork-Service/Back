@@ -17,6 +17,11 @@ public interface FileStorageService {
     Resource loadAsResource(String storagePath);
 
     /**
+     * 저장된 파일의 Content-Type을 반환한다.
+     */
+    String getContentType(String storagePath);
+
+    /**
      * 파일을 삭제한다.
      */
     void delete(String storagePath);

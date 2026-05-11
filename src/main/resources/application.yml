@@ -26,7 +26,12 @@ spring:
 
 file:
   storage:
+    type: ${FILE_STORAGE_TYPE:local}
     base-path: ${FILE_STORAGE_BASE_PATH:./uploads}
+    s3:
+      bucket: ${AWS_S3_BUCKET:}
+      region: ${AWS_REGION:ap-northeast-2}
+      key-prefix: ${AWS_S3_KEY_PREFIX:}
 
 jwt:
   secret: ${JWT_SECRET:cowork-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm}

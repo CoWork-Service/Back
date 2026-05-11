@@ -9,6 +9,11 @@ EC2_HOST=3.35.27.121
 EC2_USER=ubuntu
 EC2_SSH_KEY=<private key content>
 BACKEND_ENV=<production .env content>
+FILE_STORAGE_TYPE=s3
+AWS_REGION=ap-northeast-2
+AWS_S3_BUCKET=cowork-backend-uploads-396868033125
+AWS_ACCESS_KEY_ID=<aws access key id>
+AWS_SECRET_ACCESS_KEY=<aws secret access key>
 ```
 
 Recommended `BACKEND_ENV` shape:
@@ -33,3 +38,8 @@ SSO_ALLOW_UNVERIFIED_FALLBACK=false
 
 The workflow builds the Spring Boot jar on GitHub Actions, uploads the deployment bundle to
 `/opt/cowork/backend`, and restarts Docker Compose on the EC2 host.
+
+Uploaded files are stored in the private S3 bucket configured by `AWS_S3_BUCKET`.
+The application stores S3 metadata such as object key, original name, content type, size, module,
+and cohort ID in the `stored_files` MySQL table. Public S3 access stays blocked; existing
+`/uploads/{storagePath}` URLs are served by the backend from S3.
