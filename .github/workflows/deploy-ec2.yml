@@ -76,13 +76,16 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s' "$EC2_SSH_KEY" > ~/.ssh/cowork-backend-key.pem
           chmod 600 ~/.ssh/cowork-backend-key.pem
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -T 30 -H "$EC2_HOST" >> ~/.ssh/known_hosts || true
 
       - name: Bootstrap EC2 host
         if: steps.deployment_secrets.outputs.ready == 'true'
         shell: bash
         run: |
-          ssh -i ~/.ssh/cowork-backend-key.pem "$EC2_USER@$EC2_HOST" << 'EOF'
+          ssh -i ~/.ssh/cowork-backend-key.pem \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            "$EC2_USER@$EC2_HOST" << 'EOF'
             set -euo pipefail
 
             if ! command -v docker >/dev/null 2>&1; then
@@ -111,14 +114,17 @@ jobs:
         shell: bash
         run: |
           rsync -az --delete \
-            -e "ssh -i ~/.ssh/cowork-backend-key.pem" \
+            -e "ssh -i ~/.ssh/cowork-backend-key.pem -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30" \
             deploy/ "$EC2_USER@$EC2_HOST:$DEPLOY_PATH/"
 
       - name: Restart backend
         if: steps.deployment_secrets.outputs.ready == 'true'
         shell: bash
         run: |
-          ssh -i ~/.ssh/cowork-backend-key.pem "$EC2_USER@$EC2_HOST" << EOF
+          ssh -i ~/.ssh/cowork-backend-key.pem \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            "$EC2_USER@$EC2_HOST" << EOF
             set -euo pipefail
             cd "$DEPLOY_PATH"
             sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
