@@ -173,7 +173,8 @@ jobs:
               "$EC2_USER@$EC2_HOST" << EOF
             set -euo pipefail
             cd "$DEPLOY_PATH"
-            sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d
+            sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d mysql
+            sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --force-recreate --no-deps app caddy
             sudo docker image prune -f
             sudo docker compose -f docker-compose.yml -f docker-compose.app.yml ps
           EOF
