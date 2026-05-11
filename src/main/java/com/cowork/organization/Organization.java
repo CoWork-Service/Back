@@ -47,7 +47,7 @@ public class Organization {
      * - 유니크 제약: 코드가 겹치지 않아야 함.
      * - 보안상 필요하면 관리자가 재발급할 수 있다.
      */
-    @Column(name = "invite_code", nullable = false, unique = true, length = 10)
+    @Column(name = "invite_code", nullable = false, unique = true, length = 32)
     private String inviteCode;
 
     /** 조직 생성 일시 (최초 저장 시점에만 기록, 이후 변경 불가) */

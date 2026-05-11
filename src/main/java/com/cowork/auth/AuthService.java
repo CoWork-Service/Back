@@ -33,7 +33,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     private static final String INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final int INVITE_CODE_LENGTH = 8;
+    private static final int INVITE_CODE_LENGTH = 16;
 
     @Transactional
     public TokenResponse register(RegisterRequest req) {
@@ -84,7 +84,7 @@ public class AuthService {
     }
 
     private TokenResponse registerAndJoinOrg(RegisterRequest req) {
-        Organization org = organizationRepository.findByInviteCode(req.getInviteCode())
+        Organization org = organizationRepository.findByInviteCode(normalizeInviteCode(req.getInviteCode()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITE_CODE));
 
         User user = User.builder()
@@ -92,12 +92,20 @@ public class AuthService {
                 .email(req.getEmail())
                 .password(passwordEncoder.encode(req.getPassword()))
                 .name(req.getName())
-                .joinStatus(JoinStatus.PENDING)
+                .joinStatus(JoinStatus.ACTIVE)
                 .build();
         userRepository.save(user);
 
-        // PENDING 상태 → 로그인은 불가, 메시지로 안내
-        return new TokenResponse(null, null, user.getId(), user.getName(), user.getEmail(), JoinStatus.PENDING.name());
+        Cohort cohort = cohortRepository.findByOrganizationIdOrderByYearDesc(org.getId()).stream()
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.COHORT_NOT_FOUND));
+        cohortMemberRepository.save(CohortMember.builder()
+                .cohort(cohort)
+                .user(user)
+                .role(MemberRole.EDITOR)
+                .build());
+
+        return issueTokens(user);
     }
 
     @Transactional
@@ -174,5 +182,12 @@ public class AuthService {
             return generateInviteCode();
         }
         return code;
+    }
+
+    private String normalizeInviteCode(String inviteCode) {
+        if (inviteCode == null || inviteCode.trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INVITE_CODE);
+        }
+        return inviteCode.trim().toUpperCase();
     }
 }

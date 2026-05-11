@@ -17,6 +17,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CohortService {
+    private static final String INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int INVITE_CODE_LENGTH = 16;
 
     private final CohortRepository cohortRepository;
     private final CohortMemberRepository cohortMemberRepository;
@@ -109,10 +111,15 @@ public class CohortService {
     }
 
     private String generateCode() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        StringBuilder sb = new StringBuilder(8);
+        StringBuilder sb = new StringBuilder(INVITE_CODE_LENGTH);
         java.util.Random random = new java.security.SecureRandom();
-        for (int i = 0; i < 8; i++) sb.append(chars.charAt(random.nextInt(chars.length())));
-        return sb.toString();
+        for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
+            sb.append(INVITE_CODE_CHARS.charAt(random.nextInt(INVITE_CODE_CHARS.length())));
+        }
+        String code = sb.toString();
+        if (organizationRepository.findByInviteCode(code).isPresent()) {
+            return generateCode();
+        }
+        return code;
     }
 }

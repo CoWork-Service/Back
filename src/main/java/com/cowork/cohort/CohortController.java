@@ -404,7 +404,7 @@ public class CohortController {
                             examples = @ExampleObject(value = """
                                     {
                                       "success": true,
-                                      "data": { "inviteCode": "XK9M2P7Q" },
+                                      "data": { "inviteCode": "XK9M2P7Q4R8T1AZ6" },
                                       "message": null,
                                       "code": null
                                     }

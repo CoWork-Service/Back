@@ -50,6 +50,7 @@ public class SsoService {
     private static final String SAINT_SSO_URL = "https://saint.ssu.ac.kr/webSSO/sso.jsp";
     private static final String SAINT_MAIN_URL = "https://saint.ssu.ac.kr/webSSUMain/main_student.jsp";
     private static final String INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int INVITE_CODE_LENGTH = 16;
 
     private final AuthService authService;
     private final UserRepository userRepository;
@@ -193,22 +194,26 @@ public class SsoService {
                 .email(email)
                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                 .name(firstText(tempToken.getName(), tempToken.getStudentId()))
-                .joinStatus(JoinStatus.PENDING)
+                .joinStatus(JoinStatus.ACTIVE)
                 .build();
         userRepository.save(user);
-        return new TokenResponse(null, null, user.getId(), user.getName(), user.getEmail(), JoinStatus.PENDING.name());
+
+        Cohort cohort = cohortRepository.findByOrganizationIdOrderByYearDesc(organization.getId()).stream()
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.COHORT_NOT_FOUND));
+        cohortMemberRepository.save(CohortMember.builder()
+                .cohort(cohort)
+                .user(user)
+                .role(MemberRole.EDITOR)
+                .build());
+
+        return authService.issueTokens(user);
     }
 
     private Organization findOrganizationForJoin(SsoRegisterRequest req, SsoTempToken tempToken) {
         if (hasText(req.getInviteCode())) {
             return organizationRepository.findByInviteCode(req.getInviteCode().trim().toUpperCase())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITE_CODE));
-        }
-
-        String department = firstText(req.getDepartment(), tempToken.getDepartment());
-        if (hasText(department)) {
-            return organizationRepository.findFirstByDepartmentOrderByIdAsc(department)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.ORGANIZATION_NOT_FOUND));
         }
 
         throw new BusinessException(ErrorCode.INVALID_INVITE_CODE);
@@ -315,8 +320,8 @@ public class SsoService {
 
     private String generateInviteCode() {
         SecureRandom random = new SecureRandom();
-        StringBuilder builder = new StringBuilder(8);
-        for (int i = 0; i < 8; i++) {
+        StringBuilder builder = new StringBuilder(INVITE_CODE_LENGTH);
+        for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
             builder.append(INVITE_CODE_CHARS.charAt(random.nextInt(INVITE_CODE_CHARS.length())));
         }
         String code = builder.toString();
