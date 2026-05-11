@@ -20,8 +20,8 @@ services:
       SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:-1}
 
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     volumes:
       - ./build/libs/app.jar:/app/app.jar:ro
       - ./.env:/app/.env:ro
