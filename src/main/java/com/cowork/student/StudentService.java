@@ -78,11 +78,13 @@ public class StudentService {
                                  Integer grade, PaymentStatus paymentStatus, LocalDateTime paidAt, String note) {
         Student student = findById(id);
 
-        studentRepository.findByCohortIdAndStudentNumberAndDeletedAtIsNull(student.getCohortId(), studentNumber)
-                .filter(existing -> !existing.getId().equals(id))
-                .ifPresent(existing -> {
-                    throw new BusinessException(ErrorCode.STUDENT_DUPLICATE);
-                });
+        if (StringUtils.hasText(studentNumber) && !studentNumber.equals(student.getStudentNumber())) {
+            studentRepository.findByCohortIdAndStudentNumberAndDeletedAtIsNull(student.getCohortId(), studentNumber)
+                    .filter(existing -> !existing.getId().equals(id))
+                    .ifPresent(existing -> {
+                        throw new BusinessException(ErrorCode.STUDENT_DUPLICATE);
+                    });
+        }
 
         student.update(studentNumber, name, department, grade, note);
         if (paymentStatus != null) {

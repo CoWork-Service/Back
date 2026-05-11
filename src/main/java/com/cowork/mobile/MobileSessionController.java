@@ -1,5 +1,7 @@
 package com.cowork.mobile;
 
+import com.cowork.budget.Expense;
+import com.cowork.cohort.Department;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
@@ -18,7 +20,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @Tag(name = "Mobile Session", description = "모바일 사진 업로드 세션 API — 영수증·사진을 모바일로 간편 촬영하여 데스크톱 세션에 전달")
@@ -200,6 +204,36 @@ public class MobileSessionController {
     }
 
     @Operation(
+            summary = "모바일 업로드 사진으로 지출 확정 (인증 불필요)",
+            description = """
+                    모바일에서 업로드한 영수증 사진을 실제 지출 내역으로 등록합니다.
+
+                    **사용 시점:** 모바일 영수증 등록 화면에서 사진 업로드 후 지출 정보를 입력하고 저장할 때.
+
+                    이미 지출로 확정된 세션이면 기존 지출 ID를 반환합니다.
+                    """)
+    @PostMapping("/{token}/expense")
+    public ResponseEntity<ApiResponse<MobileExpenseResponse>> createExpense(
+            @Parameter(description = "세션 토큰", required = true) @PathVariable String token,
+            @RequestBody MobileExpenseRequest request) {
+        Expense expense = mobileSessionService.createExpense(
+                token,
+                request.getDate(),
+                request.getDepartment(),
+                request.getCategory(),
+                request.getVendor(),
+                request.getDescription(),
+                request.getAmount(),
+                request.getPaymentMethod(),
+                request.getNote(),
+                request.getEventId(),
+                request.getPhotoIds()
+        );
+        MobileSession session = mobileSessionService.getResult(token);
+        return ResponseEntity.ok(ApiResponse.ok(MobileExpenseResponse.of(session, expense)));
+    }
+
+    @Operation(
             summary = "세션 삭제 (인증 필요)",
             description = """
                     모바일 세션을 삭제합니다.
@@ -231,6 +265,20 @@ public class MobileSessionController {
         private Long cohortId;
     }
 
+    @Getter
+    static class MobileExpenseRequest {
+        private LocalDate date;
+        private Department department;
+        private String category;
+        private String vendor;
+        private String description;
+        private Long amount;
+        private String paymentMethod;
+        private String note;
+        private Long eventId;
+        private List<Long> photoIds;
+    }
+
     record MobileSessionResponse(String sessionToken, String qrUrl, LocalDateTime expiresAt) {
         static MobileSessionResponse of(MobileSession session) {
             return new MobileSessionResponse(
@@ -241,21 +289,35 @@ public class MobileSessionController {
         }
     }
 
-    record MobileSessionStatusResponse(String sessionToken, boolean used, boolean expired, LocalDateTime expiresAt) {
+    record MobileSessionStatusResponse(String sessionToken, boolean used, boolean expired, Long expenseId,
+                                       LocalDateTime expiresAt) {
         static MobileSessionStatusResponse of(MobileSession session) {
             return new MobileSessionStatusResponse(
-                    session.getSessionToken(), session.isUsed(), session.isExpired(), session.getExpiresAt()
+                    session.getSessionToken(), session.isUsed(), session.isExpired(),
+                    session.getExpenseId(), session.getExpiresAt()
             );
         }
     }
 
     record MobileUploadResponse(boolean used, String photoPath, String photoUrl,
-                                Map<String, Object> extraData, LocalDateTime expiresAt) {
+                                Map<String, Object> extraData, Long expenseId, LocalDateTime expiresAt) {
         static MobileUploadResponse of(MobileSession session) {
             return new MobileUploadResponse(
                     session.isUsed(), session.getPhotoPath(),
                     session.getPhotoPath() != null ? "/uploads/" + session.getPhotoPath() : null,
-                    session.getExtraData(), session.getExpiresAt()
+                    session.getExtraData(), session.getExpenseId(), session.getExpiresAt()
+            );
+        }
+    }
+
+    record MobileExpenseResponse(Long expenseId, String receiptUrl, boolean used,
+                                 LocalDateTime expiresAt) {
+        static MobileExpenseResponse of(MobileSession session, Expense expense) {
+            return new MobileExpenseResponse(
+                    expense.getId(),
+                    expense.getReceiptStoragePath() != null ? "/uploads/" + expense.getReceiptStoragePath() : null,
+                    session.isUsed(),
+                    session.getExpiresAt()
             );
         }
     }

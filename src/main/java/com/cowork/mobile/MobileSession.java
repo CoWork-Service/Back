@@ -39,6 +39,9 @@ public class MobileSession {
     @Column(name = "photo_path", length = 500)
     private String photoPath;
 
+    @Column(name = "expense_id")
+    private Long expenseId;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "extra_data", columnDefinition = "JSON")
     private Map<String, Object> extraData;
@@ -59,5 +62,9 @@ public class MobileSession {
         this.used = true;
         this.photoPath = photoPath;
         this.extraData = extraData;
+    }
+
+    public void attachExpense(Long expenseId) {
+        this.expenseId = expenseId;
     }
 }

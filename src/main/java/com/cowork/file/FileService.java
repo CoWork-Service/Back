@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -36,20 +37,21 @@ public class FileService {
     }
 
     @Transactional
-    public FileItem createFolder(Long cohortId, String name, Long parentId, Department department) {
+    public FileItem createFolder(Long cohortId, String name, Long parentId, Department department, Long eventId) {
         FileItem folder = FileItem.builder()
                 .cohortId(cohortId)
                 .name(name)
                 .type(FileType.FOLDER)
                 .parentId(parentId)
                 .department(department)
+                .eventId(eventId)
                 .build();
         return fileItemRepository.save(folder);
     }
 
     @Transactional
     public FileItem uploadFile(Long cohortId, MultipartFile file, Long parentId,
-                               Department department, String uploadedBy, Long actorId) {
+                               Department department, Long eventId, String uploadedBy, Long actorId) {
         String storagePath = storageService.store(file, "files", cohortId);
         FileItem fileItem = FileItem.builder()
                 .cohortId(cohortId)
@@ -60,6 +62,7 @@ public class FileService {
                 .parentId(parentId)
                 .storagePath(storagePath)
                 .department(department)
+                .eventId(eventId)
                 .uploadedBy(uploadedBy)
                 .build();
         fileItemRepository.save(fileItem);
@@ -69,16 +72,21 @@ public class FileService {
     }
 
     @Transactional
-    public FileItem updateFile(Long id, String newName, Department department, Long actorId, String actorName) {
+    public FileItem updateFile(Long id, String newName, Department department, boolean updateDepartment,
+                               Long eventId, boolean updateEvent, Long actorId, String actorName) {
         FileItem file = getFile(id);
         if (newName != null && !newName.equals(file.getName())) {
             String oldName = file.getName();
             file.rename(newName);
             logAction(id, FileLogAction.RENAME, actorId, actorName, Map.of("from", oldName, "to", newName));
         }
-        if (department != file.getDepartment()) {
+        if (updateDepartment && department != file.getDepartment()) {
             file.updateDepartment(department);
             logAction(id, FileLogAction.UPDATE, actorId, actorName, Map.of("department", String.valueOf(department)));
+        }
+        if (updateEvent && !Objects.equals(eventId, file.getEventId())) {
+            file.updateEventId(eventId);
+            logAction(id, FileLogAction.UPDATE, actorId, actorName, Map.of("eventId", String.valueOf(eventId)));
         }
         return file;
     }

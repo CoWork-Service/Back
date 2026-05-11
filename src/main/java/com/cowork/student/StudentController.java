@@ -190,7 +190,7 @@ public class StudentController {
                             """)))
             @RequestBody StudentRequest request) {
         Student student = studentService.createStudent(
-                request.getCohortId(), request.getStudentNumber(), request.getName(),
+                request.getCohortId(), request.resolveStudentNumber(), request.getName(),
                 request.getDepartment(), request.getGrade(), request.getPaymentStatus(),
                 request.getPaidAt(), request.getNote()
         );
@@ -309,7 +309,7 @@ public class StudentController {
                             """)))
             @RequestBody StudentRequest request) {
         Student student = studentService.updateStudent(
-                id, request.getStudentNumber(), request.getName(), request.getDepartment(),
+                id, request.resolveStudentNumber(), request.getName(), request.getDepartment(),
                 request.getGrade(), request.getPaymentStatus(), request.getPaidAt(), request.getNote()
         );
         return ResponseEntity.ok(ApiResponse.ok(StudentResponse.of(student)));
@@ -377,12 +377,17 @@ public class StudentController {
     static class StudentRequest {
         private Long cohortId;
         private String studentNumber;
+        private String studentId;
         private String name;
         private String department;
         private Integer grade;
         private PaymentStatus paymentStatus;
         private LocalDateTime paidAt;
         private String note;
+
+        String resolveStudentNumber() {
+            return studentNumber != null ? studentNumber : studentId;
+        }
     }
 
     @Getter
@@ -391,12 +396,13 @@ public class StudentController {
         private PaymentStatus paymentStatus;
     }
 
-    record StudentResponse(Long id, Long cohortId, String studentNumber, String name, String department,
+    record StudentResponse(Long id, Long cohortId, String studentNumber, String studentId, String name, String department,
                            Integer grade, String paymentStatus, LocalDateTime paidAt, String note,
                            LocalDateTime createdAt, LocalDateTime updatedAt) {
         static StudentResponse of(Student student) {
             return new StudentResponse(
                     student.getId(), student.getCohortId(), student.getStudentNumber(),
+                    student.getStudentNumber(),
                     student.getName(), student.getDepartment(), student.getGrade(),
                     student.getPaymentStatus().name(), student.getPaidAt(), student.getNote(),
                     student.getCreatedAt(), student.getUpdatedAt()

@@ -81,11 +81,21 @@ public class Student extends BaseEntity {
      * 사용 시점: 관리자가 개별 학생 정보를 편집할 때 StudentService.updateStudent() 에서 호출.
      */
     public void update(String studentNumber, String name, String department, Integer grade, String note) {
-        this.studentNumber = studentNumber;
-        this.name = name;
-        this.department = department;
-        this.grade = grade;
-        this.note = note;
+        if (studentNumber != null) {
+            this.studentNumber = studentNumber;
+        }
+        if (name != null) {
+            this.name = name;
+        }
+        if (department != null) {
+            this.department = department;
+        }
+        if (grade != null) {
+            this.grade = grade;
+        }
+        if (note != null) {
+            this.note = note;
+        }
     }
 
     /**

@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/timetables/*/respond").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/mobile/sessions/*").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/mobile/sessions/*/upload").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/mobile/sessions/*/expense").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 // All other requests require authentication

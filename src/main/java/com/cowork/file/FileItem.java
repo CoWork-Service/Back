@@ -127,4 +127,8 @@ public class FileItem extends BaseEntity {
     public void updateDepartment(Department department) {
         this.department = department;
     }
+
+    public void updateEventId(Long eventId) {
+        this.eventId = eventId;
+    }
 }

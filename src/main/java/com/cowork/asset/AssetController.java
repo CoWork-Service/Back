@@ -122,12 +122,13 @@ public class AssetController {
             @Parameter(description = "코호트 ID (필수)", required = true, example = "5") @RequestParam Long cohortId,
             @Parameter(description = "자산명 (필수)", required = true, example = "블루투스 스피커") @RequestParam String name,
             @Parameter(description = "분류 (예: 전자기기)", example = "전자기기") @RequestParam(required = false) String category,
+            @Parameter(description = "태그 목록") @RequestParam(required = false) List<String> tags,
             @Parameter(description = "수량 (기본값: 1)", example = "1") @RequestParam(required = false) Integer quantity,
             @Parameter(description = "구매 금액 (원화)", example = "80000") @RequestParam(required = false) Long purchasePrice,
             @Parameter(description = "보관 위치", example = "동아리방 선반") @RequestParam(required = false) String location,
             @Parameter(description = "자산 설명", example = "회의실 사용 가능") @RequestParam(required = false) String description,
             @Parameter(description = "자산 사진 파일 (이미지)") @RequestParam(required = false) MultipartFile photo) {
-        Asset asset = assetService.createAsset(cohortId, name, category, null, quantity,
+        Asset asset = assetService.createAsset(cohortId, name, category, tags, quantity,
                 purchasePrice, location, description, photo);
         return ResponseEntity.ok(ApiResponse.ok(AssetResponse.of(asset)));
     }
@@ -234,13 +235,14 @@ public class AssetController {
             @Parameter(description = "자산 ID", required = true, example = "1") @PathVariable Long id,
             @Parameter(description = "자산명") @RequestParam(required = false) String name,
             @Parameter(description = "분류") @RequestParam(required = false) String category,
+            @Parameter(description = "태그 목록") @RequestParam(required = false) List<String> tags,
             @Parameter(description = "수량") @RequestParam(required = false) Integer quantity,
             @Parameter(description = "구매 금액") @RequestParam(required = false) Long purchasePrice,
             @Parameter(description = "보관 위치") @RequestParam(required = false) String location,
             @Parameter(description = "자산 상태 (AVAILABLE / RENTED / MAINTENANCE / DISPOSED)") @RequestParam(required = false) AssetStatus status,
             @Parameter(description = "자산 설명") @RequestParam(required = false) String description,
             @Parameter(description = "새 사진 파일 (없으면 기존 사진 유지)") @RequestParam(required = false) MultipartFile photo) {
-        Asset asset = assetService.updateAsset(id, name, category, null, quantity, purchasePrice,
+        Asset asset = assetService.updateAsset(id, name, category, tags, quantity, purchasePrice,
                 location, status, description, photo);
         return ResponseEntity.ok(ApiResponse.ok(AssetResponse.of(asset)));
     }
@@ -392,12 +394,15 @@ public class AssetController {
     }
 
     record AssetResponse(Long id, Long cohortId, String name, String category, List<String> tags,
-                         String photoStoragePath, Integer quantity, Integer availableQuantity,
+                         String photoStoragePath, String photoUrl, Integer quantity, Integer availableQuantity,
                          Long purchasePrice, String location, String status, String description,
                          LocalDateTime createdAt) {
         static AssetResponse of(Asset a) {
             return new AssetResponse(a.getId(), a.getCohortId(), a.getName(), a.getCategory(),
-                    a.getTags(), a.getPhotoStoragePath(), a.getQuantity(), a.getAvailableQuantity(),
+                    a.getTags() != null ? a.getTags() : List.of(),
+                    a.getPhotoStoragePath(),
+                    a.getPhotoStoragePath() != null ? "/uploads/" + a.getPhotoStoragePath() : null,
+                    a.getQuantity(), a.getAvailableQuantity(),
                     a.getPurchasePrice(), a.getLocation(), a.getStatus().name(), a.getDescription(),
                     a.getCreatedAt());
         }

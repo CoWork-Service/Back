@@ -4,6 +4,7 @@ import com.cowork.cohort.Department;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -148,7 +149,7 @@ public class FileController {
                             """)))
             @RequestBody FolderCreateRequest req) {
         FileItem folder = fileService.createFolder(req.getCohortId(), req.getName(),
-                req.getParentId(), req.getDepartment());
+                req.getParentId(), req.getDepartment(), req.getEventId());
         return ResponseEntity.ok(ApiResponse.ok(FileItemResponse.of(folder)));
     }
 
@@ -198,9 +199,10 @@ public class FileController {
             @Parameter(description = "코호트 ID", required = true, example = "5") @RequestParam Long cohortId,
             @Parameter(description = "업로드 위치 폴더 ID (null이면 루트)", example = "10") @RequestParam(required = false) Long parentId,
             @Parameter(description = "담당 부서") @RequestParam(required = false) Department department,
+            @Parameter(description = "연결할 행사 ID") @RequestParam(required = false) Long eventId,
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userRepository.findById(Long.parseLong(userDetails.getUsername())).orElseThrow();
-        FileItem fileItem = fileService.uploadFile(cohortId, file, parentId, department,
+        FileItem fileItem = fileService.uploadFile(cohortId, file, parentId, department, eventId,
                 user.getName(), user.getId());
         return ResponseEntity.ok(ApiResponse.ok(FileItemResponse.of(fileItem)));
     }
@@ -309,7 +311,10 @@ public class FileController {
             @RequestBody FileUpdateRequest body,
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userRepository.findById(Long.parseLong(userDetails.getUsername())).orElseThrow();
-        FileItem file = fileService.updateFile(id, body.getName(), body.getDepartment(), user.getId(), user.getName());
+        FileItem file = fileService.updateFile(id, body.getName(),
+                body.getDepartment(), body.isDepartmentPresent(),
+                body.getEventId(), body.isEventIdPresent(),
+                user.getId(), user.getName());
         return ResponseEntity.ok(ApiResponse.ok(FileItemResponse.of(file)));
     }
 
@@ -421,22 +426,44 @@ public class FileController {
         private String name;
         private Long parentId;
         private Department department;
+        private Long eventId;
     }
 
     @Getter
     static class FileUpdateRequest {
         private String name;
         private Department department;
+        private boolean departmentPresent;
+        private Long eventId;
+        private boolean eventIdPresent;
+
+        @JsonSetter("department")
+        public void setDepartment(Department department) {
+            this.department = department;
+            this.departmentPresent = true;
+        }
+
+        @JsonSetter("eventId")
+        public void setEventId(Long eventId) {
+            this.eventId = eventId;
+            this.eventIdPresent = true;
+        }
     }
 
     record FileItemResponse(Long id, Long cohortId, String name, String type, String mimeType,
                             Long size, Long parentId, String department, String uploadedBy,
+                            Long eventId, String downloadUrl, String previewUrl,
                             LocalDateTime createdAt, LocalDateTime updatedAt) {
         static FileItemResponse of(FileItem f) {
             return new FileItemResponse(f.getId(), f.getCohortId(), f.getName(), f.getType().name(),
                     f.getMimeType(), f.getSize(), f.getParentId(),
                     f.getDepartment() != null ? f.getDepartment().name() : null,
-                    f.getUploadedBy(), f.getCreatedAt(), f.getUpdatedAt());
+                    f.getUploadedBy(), f.getEventId(),
+                    f.getType() == FileType.FILE ? "/api/files/" + f.getId() + "/download" : null,
+                    f.getStoragePath() != null && f.getMimeType() != null && f.getMimeType().startsWith("image/")
+                            ? "/uploads/" + f.getStoragePath()
+                            : null,
+                    f.getCreatedAt(), f.getUpdatedAt());
         }
     }
 

@@ -111,14 +111,37 @@ public class Asset extends BaseEntity {
      */
     public void update(String name, String category, List<String> tags, Integer quantity,
                        Long purchasePrice, String location, AssetStatus status, String description) {
-        this.name = name;
-        this.category = category;
-        this.tags = tags;
-        this.quantity = quantity;
-        this.purchasePrice = purchasePrice;
-        this.location = location;
-        this.status = status;
-        this.description = description;
+        if (name != null) {
+            this.name = name;
+        }
+        if (category != null) {
+            this.category = category;
+        }
+        if (tags != null) {
+            this.tags = tags;
+        }
+        if (quantity != null) {
+            int rentedQuantity = Math.max(0, this.quantity - this.availableQuantity);
+            this.quantity = quantity;
+            this.availableQuantity = Math.max(0, quantity - rentedQuantity);
+            if (this.availableQuantity == 0) {
+                this.status = AssetStatus.RENTED;
+            } else if (this.status == AssetStatus.RENTED) {
+                this.status = AssetStatus.AVAILABLE;
+            }
+        }
+        if (purchasePrice != null) {
+            this.purchasePrice = purchasePrice;
+        }
+        if (location != null) {
+            this.location = location;
+        }
+        if (status != null) {
+            this.status = status;
+        }
+        if (description != null) {
+            this.description = description;
+        }
     }
 
     /**
