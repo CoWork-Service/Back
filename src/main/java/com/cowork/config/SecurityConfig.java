@@ -39,7 +39,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Public endpoints
                 .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/sso/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/surveys/*").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/surveys/*/respond").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/timetables/*").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/timetables/*/respond").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/mobile/sessions/*").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/mobile/sessions/*/upload").permitAll()

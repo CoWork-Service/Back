@@ -444,10 +444,12 @@ public class CohortController {
         }
     }
 
-    record MemberResponse(Long id, Long userId, String name, String email, MemberRole role, Department department) {
+    record MemberResponse(Long id, Long userId, String name, String email, String studentId,
+                          MemberRole role, Department department, java.time.LocalDateTime joinedAt) {
         static MemberResponse of(CohortMember m) {
             return new MemberResponse(m.getId(), m.getUser().getId(), m.getUser().getName(),
-                    m.getUser().getEmail(), m.getRole(), m.getDepartment());
+                    m.getUser().getEmail(), m.getUser().getStudentId(), m.getRole(),
+                    m.getDepartment(), m.getCreatedAt());
         }
     }
 }
