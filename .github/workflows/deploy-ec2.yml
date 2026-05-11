@@ -119,6 +119,7 @@ jobs:
 
       - name: Restart backend
         if: steps.deployment_secrets.outputs.ready == 'true'
+        timeout-minutes: 8
         shell: bash
         run: |
           ssh -i ~/.ssh/cowork-backend-key.pem \
