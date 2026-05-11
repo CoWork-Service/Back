@@ -51,6 +51,7 @@ public class SsoService {
     private static final String SAINT_MAIN_URL = "https://saint.ssu.ac.kr/webSSUMain/main_student.jsp";
     private static final String INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int INVITE_CODE_LENGTH = 16;
+    private static final String SOONGSIL_MAIL_DOMAIN = "soongsil.ac.kr";
 
     private final AuthService authService;
     private final UserRepository userRepository;
@@ -315,7 +316,7 @@ public class SsoService {
     }
 
     private String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
-        return firstText(requestEmail, ssoEmail, studentId + "@sso.cowork.local").toLowerCase();
+        return firstText(requestEmail, ssoEmail, studentId + "@" + SOONGSIL_MAIL_DOMAIN).toLowerCase();
     }
 
     private String generateInviteCode() {
