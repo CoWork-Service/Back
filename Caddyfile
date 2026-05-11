@@ -1,0 +1,4 @@
+{$BACKEND_DOMAIN:3-35-27-121.sslip.io} {
+	encode gzip
+	reverse_proxy app:8080
+}

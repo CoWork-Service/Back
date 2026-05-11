@@ -75,7 +75,7 @@ jobs:
         run: |
           rm -rf deploy
           mkdir -p deploy/build/libs
-          cp Dockerfile docker-compose.yml docker-compose.app.yml deploy/
+          cp Dockerfile docker-compose.yml docker-compose.app.yml Caddyfile deploy/
           cp build/libs/*.jar deploy/build/libs/app.jar
           {
             printf '%s\n' "$BACKEND_ENV"

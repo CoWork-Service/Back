@@ -28,5 +28,23 @@ services:
       - app_uploads:/app/uploads
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: ${CADDY_CONTAINER_NAME:-cowork-caddy}
+    depends_on:
+      - app
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
 volumes:
   app_uploads:
+  caddy_data:
+  caddy_config:

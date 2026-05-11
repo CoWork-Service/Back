@@ -20,7 +20,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${file.storage.type:local}")
     private String storageType;
 
-    @Value("${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173,https://front-eosin-nu.vercel.app}")
+    @Value("${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173,https://d3enhw6vmzgeun.cloudfront.net}")
     private String corsAllowedOriginPatterns;
 
     @Override
