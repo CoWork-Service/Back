@@ -1,16 +1,16 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: ${APP_IMAGE:-cowork-backend:latest}
+    image: eclipse-temurin:17-jre
     container_name: ${APP_CONTAINER_NAME:-cowork-backend}
     depends_on:
       - mysql
+    working_dir: /app
+    command: ["java", "-jar", "/app/app.jar"]
     env_file:
       - .env
     environment:
       TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--XX:MaxRAMPercentage=65.0 -XX:+UseSerialGC}
 
       # Spring이 MySQL 컨테이너로 붙도록
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -21,6 +21,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
+      - ./build/libs/app.jar:/app/app.jar:ro
       - ./.env:/app/.env:ro
       - app_uploads:/app/uploads
     restart: unless-stopped

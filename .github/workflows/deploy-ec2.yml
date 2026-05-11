@@ -123,6 +123,18 @@ jobs:
               sudo apt-get install -y rsync
             fi
 
+            if [ ! -f /swapfile ]; then
+              sudo fallocate -l 1G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+            fi
+            if ! swapon --show | grep -q '/swapfile'; then
+              sudo swapon /swapfile
+            fi
+            if ! grep -q '^/swapfile ' /etc/fstab; then
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null
+            fi
+
             sudo mkdir -p /opt/cowork/backend
             sudo chown -R "$USER:$USER" /opt/cowork
           EOF
@@ -161,7 +173,7 @@ jobs:
               "$EC2_USER@$EC2_HOST" << EOF
             set -euo pipefail
             cd "$DEPLOY_PATH"
-            sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
+            sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d
             sudo docker image prune -f
             sudo docker compose -f docker-compose.yml -f docker-compose.app.yml ps
           EOF
