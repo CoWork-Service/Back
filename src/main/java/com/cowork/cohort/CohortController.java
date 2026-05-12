@@ -89,11 +89,38 @@ public class CohortController {
                                     """))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "코호트를 찾을 수 없음")
     })
+
     @GetMapping("/cohorts/{id}")
     public ResponseEntity<ApiResponse<CohortResponse>> getCohort(
             @Parameter(description = "코호트 ID", required = true, example = "3") @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(CohortResponse.of(cohortService.getCohort(id))));
     }
+    @Operation(
+            summary = "이전 기수 목록 조회 [ADMIN 전용]",
+            description = """
+                현재 기수를 제외한 이전 기수 목록을 반환합니다.
+
+                **사용 시점:** 학생회장이 이전 기수 자료를 조회할 때.
+
+                **권한:** ADMIN 역할 필요
+                """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "이전 기수 목록 조회 성공",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                {
+                                  "success": true,
+                                  "data": [
+                                    { "id": 1, "label": "1기", "year": 2023 },
+                                    { "id": 2, "label": "2기", "year": 2024 }
+                                  ],
+                                  "message": null,
+                                  "code": null
+                                }
+                                """))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "ADMIN 권한 없음")
+    })
+
     @GetMapping("/cohorts/previous")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<CohortResponse>>> getPreviousCohorts(
