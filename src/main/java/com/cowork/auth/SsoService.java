@@ -110,7 +110,7 @@ public class SsoService {
     @Transactional
     public SsoProfileResponse getSsoProfile(String tempToken) {
         SsoTempToken token = findValidTempToken(tempToken);
-        return new SsoProfileResponse(token.getStudentId(), token.getName(), token.getDepartment(), token.getEmail());
+        return new SsoProfileResponse(token.getStudentId(), token.getName(), token.getDepartment());
     }
 
     @Transactional
@@ -120,7 +120,7 @@ public class SsoService {
             throw new BusinessException(ErrorCode.DUPLICATE_STUDENT_ID);
         }
 
-        String email = resolveEmail(req.getEmail(), tempToken.getEmail(), tempToken.getStudentId());
+        String email = resolveEmail(tempToken.getEmail(), tempToken.getStudentId());
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
@@ -146,7 +146,6 @@ public class SsoService {
         params.put("refreshToken", token.getRefreshToken());
         params.put("userId", String.valueOf(token.getUserId()));
         params.put("name", token.getName());
-        params.put("email", token.getEmail());
         params.put("studentId", defaultString(user.getStudentId()));
         params.put("department", firstText(user.getOrganization().getDepartment(), profile.department()));
         params.put("organizationId", String.valueOf(user.getOrganization().getId()));
@@ -333,12 +332,9 @@ public class SsoService {
                 .orElse(null);
     }
 
-    String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
+    String resolveEmail(String ssoEmail, String studentId) {
         if (isSoongsilEmail(ssoEmail)) {
             return ssoEmail.trim().toLowerCase();
-        }
-        if (isSoongsilEmail(requestEmail)) {
-            return requestEmail.trim().toLowerCase();
         }
         return (studentId + "@" + SOONGSIL_MAIL_DOMAIN).toLowerCase();
     }

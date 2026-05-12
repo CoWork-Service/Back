@@ -51,14 +51,10 @@ class SsoServiceTest {
     }
 
     @Test
-    void resolvesParsedSoongsilEmailBeforeRequestEmail() {
+    void resolvesParsedSoongsilEmail() {
         SsoService service = new SsoService(null, null, null, null, null, null, null, null);
 
-        String email = service.resolveEmail(
-                "sos@soongsil.dooray.com",
-                "student@soongsil.ac.kr",
-                "20231728"
-        );
+        String email = service.resolveEmail("student@soongsil.ac.kr", "20231728");
 
         assertThat(email).isEqualTo("student@soongsil.ac.kr");
     }
@@ -67,11 +63,7 @@ class SsoServiceTest {
     void ignoresDoorayEmailWhenResolvingRegistrationEmail() {
         SsoService service = new SsoService(null, null, null, null, null, null, null, null);
 
-        String email = service.resolveEmail(
-                "sos@soongsil.dooray.com",
-                "student@soongsil.dooray.com",
-                "20231728"
-        );
+        String email = service.resolveEmail("student@soongsil.dooray.com", "20231728");
 
         assertThat(email).isEqualTo("20231728@soongsil.ac.kr");
     }
@@ -80,7 +72,7 @@ class SsoServiceTest {
     void fallsBackToStudentIdEmailWhenNoValidEmailExists() {
         SsoService service = new SsoService(null, null, null, null, null, null, null, null);
 
-        String email = service.resolveEmail(null, null, "20231728");
+        String email = service.resolveEmail(null, "20231728");
 
         assertThat(email).isEqualTo("20231728@soongsil.ac.kr");
     }
