@@ -74,9 +74,11 @@ jobs:
         shell: bash
         run: |
           rm -rf deploy
-          mkdir -p deploy/build/libs
+          mkdir -p deploy/build/libs deploy/scripts
           cp Dockerfile docker-compose.yml docker-compose.app.yml Caddyfile deploy/
           cp build/libs/*.jar deploy/build/libs/app.jar
+          cp scripts/reset-db-and-s3.sh deploy/scripts/
+          chmod +x deploy/scripts/reset-db-and-s3.sh
           {
             printf '%s\n' "$BACKEND_ENV"
             printf 'FRONTEND_URL=%s\n' "https://cowork.kro.kr"
