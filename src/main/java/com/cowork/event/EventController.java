@@ -2,7 +2,6 @@ package com.cowork.event;
 
 import com.cowork.budget.Expense;
 import com.cowork.common.ApiResponse;
-import com.cowork.cohort.Department;
 import com.cowork.schedule.Timetable;
 import com.cowork.survey.Survey;
 import com.cowork.user.User;
@@ -359,7 +358,7 @@ public class EventController {
         private LocalDate startDate;
         private LocalDate endDate;
         private String location;
-        private Department leadDepartment;
+        private String leadDepartment;
         private List<String> organizers;
         private Long budget;
         private String coverColor;
@@ -374,7 +373,7 @@ public class EventController {
                     event.getId(), event.getCohortId(), event.getName(), event.getCategory(),
                     event.getStatus().toJson(), event.getDescription(), event.getStartDate(),
                     event.getEndDate(), event.getLocation(),
-                    event.getLeadDepartment() != null ? event.getLeadDepartment().name() : null,
+                    event.getLeadDepartment(),
                     event.getOrganizers(), event.getBudget(), event.getCoverColor(),
                     event.getCreatedBy(), event.getCreatedAt(), event.getUpdatedAt()
             );

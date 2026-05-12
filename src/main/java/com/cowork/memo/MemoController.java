@@ -1,6 +1,5 @@
 package com.cowork.memo;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
@@ -78,7 +77,7 @@ public class MemoController {
             @Parameter(description = "코호트 ID (필수)", required = true, example = "5") @RequestParam Long cohortId,
             @Parameter(description = "상태 필터 (OPEN / CLOSED)", example = "OPEN") @RequestParam(required = false) MemoStatus status,
             @Parameter(description = "우선순위 필터 (LOW / NORMAL / HIGH)", example = "HIGH") @RequestParam(required = false) MemoPriority priority,
-            @Parameter(description = "부서 필터") @RequestParam(required = false) Department department) {
+            @Parameter(description = "부서 필터") @RequestParam(required = false) String department) {
         List<MemoResponse> list = memoService.getMemos(cohortId, status, priority, department)
                 .stream().map(MemoResponse::of).collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(list));
@@ -298,7 +297,7 @@ public class MemoController {
         private Long cohortId;
         private String title;
         private String content;
-        private Department department;
+        private String department;
         private MemoPriority priority;
         private MemoStatus status;
         private LocalDate dueDate;
@@ -309,7 +308,7 @@ public class MemoController {
                         LocalDateTime createdAt, LocalDateTime updatedAt) {
         static MemoResponse of(Memo m) {
             return new MemoResponse(m.getId(), m.getCohortId(), m.getTitle(), m.getContent(),
-                    m.getDepartment() != null ? m.getDepartment().name() : null,
+                    m.getDepartment(),
                     m.getPriority().name(), m.getStatus().name(), m.getDueDate(), m.getAuthor(),
                     m.getCreatedAt(), m.getUpdatedAt());
         }

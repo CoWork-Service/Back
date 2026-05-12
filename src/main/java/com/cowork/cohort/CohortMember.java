@@ -71,9 +71,8 @@ public class CohortMember {
      * 소속 부서
      * - null 허용: 부서가 지정되지 않은 경우 전체 부서로 간주.
      */
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private Department department;
+    @Column(length = 100)
+    private String department;
 
     /** 멤버 등록 일시 (변경 불가) */
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -95,7 +94,7 @@ public class CohortMember {
      * @param role       새 역할 (ADMIN / EDITOR / VIEWER)
      * @param department 새 부서 (null 이면 전체)
      */
-    public void update(MemberRole role, Department department) {
+    public void update(MemberRole role, String department) {
         this.role = role;
         this.department = department;
     }

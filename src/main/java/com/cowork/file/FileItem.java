@@ -1,6 +1,5 @@
 package com.cowork.file;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -80,9 +79,8 @@ public class FileItem extends BaseEntity {
     private String storagePath;
 
     /** 담당 부서 (null 이면 전체 공용) */
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private Department department;
+    @Column(length = 100)
+    private String department;
 
     /** 업로드한 사람 이름 (로그인 사용자 이름 저장) */
     @Column(name = "uploaded_by", length = 50)
@@ -124,7 +122,7 @@ public class FileItem extends BaseEntity {
      *
      * @param department 새 부서 (null 이면 전체 공용)
      */
-    public void updateDepartment(Department department) {
+    public void updateDepartment(String department) {
         this.department = department;
     }
 

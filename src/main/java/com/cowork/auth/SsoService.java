@@ -7,7 +7,6 @@ import com.cowork.cohort.Cohort;
 import com.cowork.cohort.CohortMember;
 import com.cowork.cohort.CohortMemberRepository;
 import com.cowork.cohort.CohortRepository;
-import com.cowork.cohort.Department;
 import com.cowork.cohort.MemberRole;
 import com.cowork.common.BusinessException;
 import com.cowork.common.ErrorCode;
@@ -185,7 +184,7 @@ public class SsoService {
                 .cohort(cohort)
                 .user(user)
                 .role(MemberRole.ADMIN)
-                .department(Department.회장단)
+                .department("회장단")
                 .build());
 
         organizationDepartmentService.replaceDepartments(organization.getId(), req.getDepartments());

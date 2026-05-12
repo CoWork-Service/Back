@@ -435,7 +435,7 @@ public class CohortController {
     @Getter
     static class MemberUpdateRequest {
         private MemberRole role;
-        private Department department;
+        private String department;
     }
 
     record CohortResponse(Long id, String label, Integer year, String organizationName) {
@@ -445,7 +445,7 @@ public class CohortController {
     }
 
     record MemberResponse(Long id, Long userId, String name, String email, String studentId,
-                          MemberRole role, Department department, java.time.LocalDateTime joinedAt) {
+                          MemberRole role, String department, java.time.LocalDateTime joinedAt) {
         static MemberResponse of(CohortMember m) {
             return new MemberResponse(m.getId(), m.getUser().getId(), m.getUser().getName(),
                     m.getUser().getEmail(), m.getUser().getStudentId(), m.getRole(),

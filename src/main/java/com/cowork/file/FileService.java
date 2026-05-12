@@ -1,6 +1,5 @@
 package com.cowork.file;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.BusinessException;
 import com.cowork.common.ErrorCode;
 import com.cowork.common.storage.FileStorageService;
@@ -22,7 +21,7 @@ public class FileService {
     private final FileLogRepository fileLogRepository;
     private final FileStorageService storageService;
 
-    public List<FileItem> getFiles(Long cohortId, Long parentId, Department department) {
+    public List<FileItem> getFiles(Long cohortId, Long parentId, String department) {
         return fileItemRepository.findFiltered(cohortId, parentId, department);
     }
 
@@ -37,7 +36,7 @@ public class FileService {
     }
 
     @Transactional
-    public FileItem createFolder(Long cohortId, String name, Long parentId, Department department, Long eventId) {
+    public FileItem createFolder(Long cohortId, String name, Long parentId, String department, Long eventId) {
         FileItem folder = FileItem.builder()
                 .cohortId(cohortId)
                 .name(name)
@@ -51,7 +50,7 @@ public class FileService {
 
     @Transactional
     public FileItem uploadFile(Long cohortId, MultipartFile file, Long parentId,
-                               Department department, Long eventId, String uploadedBy, Long actorId) {
+                               String department, Long eventId, String uploadedBy, Long actorId) {
         String storagePath = storageService.store(file, "files", cohortId);
         FileItem fileItem = FileItem.builder()
                 .cohortId(cohortId)
@@ -72,7 +71,7 @@ public class FileService {
     }
 
     @Transactional
-    public FileItem updateFile(Long id, String newName, Department department, boolean updateDepartment,
+    public FileItem updateFile(Long id, String newName, String department, boolean updateDepartment,
                                Long eventId, boolean updateEvent, Long actorId, String actorName) {
         FileItem file = getFile(id);
         if (newName != null && !newName.equals(file.getName())) {
@@ -80,7 +79,7 @@ public class FileService {
             file.rename(newName);
             logAction(id, FileLogAction.RENAME, actorId, actorName, Map.of("from", oldName, "to", newName));
         }
-        if (updateDepartment && department != file.getDepartment()) {
+        if (updateDepartment && !Objects.equals(department, file.getDepartment())) {
             file.updateDepartment(department);
             logAction(id, FileLogAction.UPDATE, actorId, actorName, Map.of("department", String.valueOf(department)));
         }

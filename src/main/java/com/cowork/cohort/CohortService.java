@@ -59,7 +59,7 @@ public class CohortService {
     }
 
     @Transactional
-    public CohortMember updateMember(Long memberId, MemberRole role, Department department) {
+    public CohortMember updateMember(Long memberId, MemberRole role, String department) {
         CohortMember member = cohortMemberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         member.update(role, department);

@@ -1,6 +1,5 @@
 package com.cowork.memo;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.BusinessException;
 import com.cowork.common.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +16,12 @@ public class MemoService {
 
     private final MemoRepository memoRepository;
 
-    public List<Memo> getMemos(Long cohortId, MemoStatus status, MemoPriority priority, Department department) {
+    public List<Memo> getMemos(Long cohortId, MemoStatus status, MemoPriority priority, String department) {
         return memoRepository.findFiltered(cohortId, status, priority, department);
     }
 
     @Transactional
-    public Memo createMemo(Long cohortId, String title, String content, Department department,
+    public Memo createMemo(Long cohortId, String title, String content, String department,
                            MemoPriority priority, MemoStatus status, LocalDate dueDate, String author) {
         Memo memo = Memo.builder()
                 .cohortId(cohortId)
@@ -38,7 +37,7 @@ public class MemoService {
     }
 
     @Transactional
-    public Memo updateMemo(Long id, String title, String content, Department department,
+    public Memo updateMemo(Long id, String title, String content, String department,
                            MemoPriority priority, MemoStatus status, LocalDate dueDate) {
         Memo memo = findById(id);
         memo.update(title, content, department, priority, status, dueDate);

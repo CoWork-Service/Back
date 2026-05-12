@@ -22,6 +22,13 @@ public class OrganizationDepartmentService {
         return organizationDepartmentRepository.findByOrganizationIdOrderBySortOrderAscNameAsc(organizationId);
     }
 
+    public List<String> getDepartmentNames(Long organizationId) {
+        List<String> names = getDepartments(organizationId).stream()
+                .map(OrganizationDepartment::getName)
+                .toList();
+        return names.isEmpty() ? DEFAULT_DEPARTMENTS : names;
+    }
+
     @Transactional
     public List<OrganizationDepartment> replaceDepartments(Long organizationId, List<String> departmentNames) {
         Organization organization = organizationRepository.findById(organizationId)

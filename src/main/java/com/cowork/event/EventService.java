@@ -46,7 +46,7 @@ public class EventService {
     @Transactional
     public EventDetail createEvent(Long cohortId, String name, String category, EventStatus status,
                                    String description, LocalDate startDate, LocalDate endDate, String location,
-                                   com.cowork.cohort.Department leadDepartment, List<String> organizers,
+                                   String leadDepartment, List<String> organizers,
                                    Long budget, String coverColor, Long createdBy) {
         CoworkEvent event = CoworkEvent.builder()
                 .cohortId(cohortId)
@@ -70,7 +70,7 @@ public class EventService {
     @Transactional
     public EventDetail updateEvent(Long eventId, String name, String category, EventStatus status,
                                    String description, LocalDate startDate, LocalDate endDate, String location,
-                                   com.cowork.cohort.Department leadDepartment, List<String> organizers,
+                                   String leadDepartment, List<String> organizers,
                                    Long budget, String coverColor) {
         CoworkEvent event = findEvent(eventId);
         event.update(name, category, status, description, startDate, endDate, location, leadDepartment, organizers, budget, coverColor);

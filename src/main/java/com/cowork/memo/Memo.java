@@ -1,6 +1,5 @@
 package com.cowork.memo;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,9 +27,8 @@ public class Memo extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private Department department;
+    @Column(length = 100)
+    private String department;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -48,7 +46,7 @@ public class Memo extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String author;
 
-    public void update(String title, String content, Department department, MemoPriority priority,
+    public void update(String title, String content, String department, MemoPriority priority,
                        MemoStatus status, LocalDate dueDate) {
         this.title = title;
         this.content = content;
