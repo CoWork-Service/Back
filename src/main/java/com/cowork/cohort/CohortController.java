@@ -50,9 +50,9 @@ public class CohortController {
                                     {
                                       "success": true,
                                       "data": [
-                                        { "id": 1, "label": "1기", "year": 2023 },
-                                        { "id": 2, "label": "2기", "year": 2024 },
-                                        { "id": 3, "label": "3기", "year": 2025 }
+                                        { "id": 1, "label": "1기", "year": 2023, "organizationName": "멋쟁이사자처럼" },
+                                        { "id": 2, "label": "2기", "year": 2024, "organizationName": "멋쟁이사자처럼" },
+                                        { "id": 3, "label": "3기", "year": 2025, "organizationName": "멋쟁이사자처럼" }
                                       ],
                                       "message": null,
                                       "code": null
@@ -81,7 +81,7 @@ public class CohortController {
                             examples = @ExampleObject(value = """
                                     {
                                       "success": true,
-                                      "data": { "id": 3, "label": "3기", "year": 2025 },
+                                      "data": { "id": 3, "label": "3기", "year": 2025, "organizationName": "멋쟁이사자처럼" },
                                       "message": null,
                                       "code": null
                                     }
@@ -109,7 +109,7 @@ public class CohortController {
                             examples = @ExampleObject(value = """
                                     {
                                       "success": true,
-                                      "data": { "id": 4, "label": "4기", "year": 2026 },
+                                      "data": { "id": 4, "label": "4기", "year": 2026, "organizationName": "멋쟁이사자처럼" },
                                       "message": null,
                                       "code": null
                                     }
@@ -147,7 +147,7 @@ public class CohortController {
                             examples = @ExampleObject(value = """
                                     {
                                       "success": true,
-                                      "data": { "id": 3, "label": "3기 (수정)", "year": 2025 },
+                                      "data": { "id": 3, "label": "3기 (수정)", "year": 2025, "organizationName": "멋쟁이사자처럼" },
                                       "message": null,
                                       "code": null
                                     }
@@ -438,9 +438,9 @@ public class CohortController {
         private Department department;
     }
 
-    record CohortResponse(Long id, String label, Integer year) {
+    record CohortResponse(Long id, String label, Integer year, String organizationName) {
         static CohortResponse of(Cohort c) {
-            return new CohortResponse(c.getId(), c.getLabel(), c.getYear());
+            return new CohortResponse(c.getId(), c.getLabel(), c.getYear(), c.getOrganization().getName());
         }
     }
 
