@@ -1,4 +1,4 @@
-{$BACKEND_DOMAIN:api.cowork.kro.kr} {
+{$BACKEND_DOMAIN:3-35-27-121.nip.io} {
 	encode gzip
 	reverse_proxy app:8080
 }
