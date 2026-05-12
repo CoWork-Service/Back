@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -52,6 +53,7 @@ public class SsoService {
     private static final String INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int INVITE_CODE_LENGTH = 16;
     private static final String SOONGSIL_MAIL_DOMAIN = "soongsil.ac.kr";
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
 
     private final AuthService authService;
     private final UserRepository userRepository;
@@ -270,6 +272,7 @@ public class SsoService {
         }
 
         String cookies = extractCookies(ssoResponse);
+        String cookieEmail = extractEmailFromCookies(ssoResponse.headers().allValues("set-cookie"));
         if (!hasText(cookies)) {
             throw new BusinessException(ErrorCode.INVALID_SSO_TOKEN);
         }
@@ -286,10 +289,10 @@ public class SsoService {
             throw new BusinessException(ErrorCode.INVALID_SSO_TOKEN);
         }
 
-        return parseSaintProfile(profileResponse.body(), sIdno);
+        return parseSaintProfile(profileResponse.body(), sIdno, cookieEmail);
     }
 
-    private SaintProfile parseSaintProfile(String html, String fallbackStudentId) {
+    private SaintProfile parseSaintProfile(String html, String fallbackStudentId, String fallbackEmail) {
         String text = html
                 .replaceAll("(?is)<script.*?</script>", " ")
                 .replaceAll("(?is)<style.*?</style>", " ")
@@ -304,7 +307,7 @@ public class SsoService {
                 match(text, "(?:성명|이름)\\s*[:：]?\\s*([가-힣A-Za-z]{2,30})")
         );
         String department = match(text, "(?:소속|학과|학부|전공)\\s*[:：]?\\s*([^\\s]{2,100})");
-        String email = match(text, "([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})");
+        String email = firstText(fallbackEmail, matchEmail(text));
 
         return new SaintProfile(studentId, defaultString(name), department, email);
     }
@@ -313,6 +316,16 @@ public class SsoService {
         return response.headers().allValues("set-cookie").stream()
                 .map(cookie -> cookie.split(";", 2)[0])
                 .reduce("", (left, right) -> left.isEmpty() ? right : left + "; " + right);
+    }
+
+    static String extractEmailFromCookies(List<String> setCookies) {
+        for (String setCookie : setCookies) {
+            String email = matchEmail(decodeCookieText(setCookie));
+            if (hasTextStatic(email)) {
+                return email.toLowerCase();
+            }
+        }
+        return null;
     }
 
     private String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
@@ -366,6 +379,33 @@ public class SsoService {
         return matcher.find() ? matcher.group(1).trim() : null;
     }
 
+    private static String matchEmail(String text) {
+        if (!hasTextStatic(text)) {
+            return null;
+        }
+        Matcher matcher = EMAIL_PATTERN.matcher(text);
+        return matcher.find() ? matcher.group().trim() : null;
+    }
+
+    private static String decodeCookieText(String value) {
+        if (value == null) {
+            return "";
+        }
+        String decoded = value;
+        for (int i = 0; i < 3; i++) {
+            try {
+                String next = URLDecoder.decode(decoded.replace("+", "%2B"), StandardCharsets.UTF_8);
+                if (next.equals(decoded)) {
+                    break;
+                }
+                decoded = next;
+            } catch (IllegalArgumentException e) {
+                break;
+            }
+        }
+        return decoded;
+    }
+
     private String firstText(String... values) {
         for (String value : values) {
             if (hasText(value)) return value.trim();
@@ -378,6 +418,10 @@ public class SsoService {
     }
 
     private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private static boolean hasTextStatic(String value) {
         return value != null && !value.trim().isEmpty();
     }
 
