@@ -2,6 +2,8 @@ package com.cowork.auth;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +39,18 @@ class SsoServiceTest {
     }
 
     @Test
+    void extractsBase64EncodedSoongsilEmailFromSetCookie() {
+        String encoded = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"email\":\"student@soongsil.ac.kr\"}".getBytes(StandardCharsets.UTF_8));
+
+        String email = SsoService.extractEmailFromCookies(List.of(
+                "profile=" + encoded + "; Path=/"
+        ));
+
+        assertThat(email).isEqualTo("student@soongsil.ac.kr");
+    }
+
+    @Test
     void resolvesParsedSoongsilEmailBeforeRequestEmail() {
         SsoService service = new SsoService(null, null, null, null, null, null, null, null);
 
@@ -47,6 +61,19 @@ class SsoServiceTest {
         );
 
         assertThat(email).isEqualTo("student@soongsil.ac.kr");
+    }
+
+    @Test
+    void ignoresDoorayEmailWhenResolvingRegistrationEmail() {
+        SsoService service = new SsoService(null, null, null, null, null, null, null, null);
+
+        String email = service.resolveEmail(
+                "sos@soongsil.dooray.com",
+                "student@soongsil.dooray.com",
+                "20231728"
+        );
+
+        assertThat(email).isEqualTo("20231728@soongsil.ac.kr");
     }
 
     @Test

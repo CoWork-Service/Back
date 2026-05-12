@@ -35,6 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +56,8 @@ public class SsoService {
     private static final int INVITE_CODE_LENGTH = 16;
     private static final String SOONGSIL_MAIL_DOMAIN = "soongsil.ac.kr";
     private static final Pattern EMAIL_PATTERN = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
+    private static final Pattern ENCODED_TOKEN_PATTERN = Pattern.compile("[A-Za-z0-9_+/\\-]{8,}={0,2}");
+    private static final int MAX_COOKIE_DECODE_DEPTH = 3;
 
     private final AuthService authService;
     private final UserRepository userRepository;
@@ -319,16 +323,14 @@ public class SsoService {
     }
 
     static String extractEmailFromCookies(List<String> setCookies) {
+        List<String> candidates = new ArrayList<>();
         for (String setCookie : setCookies) {
-            String email = matchEmail(decodeCookieText(setCookie));
-            if (hasTextStatic(email)) {
-                String normalized = email.toLowerCase();
-                if (isSoongsilEmail(normalized)) {
-                    return normalized;
-                }
-            }
+            collectEmailCandidates(setCookie, candidates, 0);
         }
-        return null;
+        return candidates.stream()
+                .filter(SsoService::isSoongsilEmail)
+                .findFirst()
+                .orElse(null);
     }
 
     String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
@@ -388,6 +390,85 @@ public class SsoService {
         }
         Matcher matcher = EMAIL_PATTERN.matcher(text);
         return matcher.find() ? matcher.group().trim() : null;
+    }
+
+    private static void collectEmailCandidates(String text, List<String> candidates, int depth) {
+        if (!hasTextStatic(text) || depth > MAX_COOKIE_DECODE_DEPTH) {
+            return;
+        }
+
+        String decoded = decodeCookieText(text);
+        Matcher emailMatcher = EMAIL_PATTERN.matcher(decoded);
+        while (emailMatcher.find()) {
+            candidates.add(emailMatcher.group().trim().toLowerCase());
+        }
+
+        if (depth == MAX_COOKIE_DECODE_DEPTH) {
+            return;
+        }
+
+        Matcher tokenMatcher = ENCODED_TOKEN_PATTERN.matcher(decoded);
+        while (tokenMatcher.find()) {
+            String token = tokenMatcher.group();
+            for (String decodedToken : decodeBase64Candidates(token)) {
+                if (!decodedToken.equals(decoded)) {
+                    collectEmailCandidates(decodedToken, candidates, depth + 1);
+                }
+            }
+        }
+    }
+
+    private static List<String> decodeBase64Candidates(String value) {
+        List<String> decodedValues = new ArrayList<>();
+        String normalized = value.trim();
+        if (normalized.length() < 8 || normalized.length() > 4096) {
+            return decodedValues;
+        }
+
+        decodeBase64(normalized, false).ifPresent(decodedValues::add);
+        decodeBase64(normalized, true).ifPresent(decoded -> {
+            if (!decodedValues.contains(decoded)) {
+                decodedValues.add(decoded);
+            }
+        });
+        return decodedValues;
+    }
+
+    private static Optional<String> decodeBase64(String value, boolean urlSafe) {
+        try {
+            String padded = padBase64(value);
+            byte[] bytes = urlSafe
+                    ? Base64.getUrlDecoder().decode(padded)
+                    : Base64.getDecoder().decode(padded);
+            if (!isMostlyText(bytes)) {
+                return Optional.empty();
+            }
+            return Optional.of(new String(bytes, StandardCharsets.UTF_8));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static String padBase64(String value) {
+        int remainder = value.length() % 4;
+        if (remainder == 0) {
+            return value;
+        }
+        return value + "=".repeat(4 - remainder);
+    }
+
+    private static boolean isMostlyText(byte[] bytes) {
+        if (bytes.length == 0 || bytes.length > 4096) {
+            return false;
+        }
+        int control = 0;
+        for (byte b : bytes) {
+            int value = b & 0xff;
+            if (value < 0x09 || (value > 0x0d && value < 0x20)) {
+                control++;
+            }
+        }
+        return control <= Math.max(1, bytes.length / 20);
     }
 
     private static String matchSoongsilEmail(String text) {
