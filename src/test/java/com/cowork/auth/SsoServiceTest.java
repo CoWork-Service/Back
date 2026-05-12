@@ -28,16 +28,25 @@ class SsoServiceTest {
     }
 
     @Test
-    void resolvesParsedSsoEmailBeforeRequestEmail() {
+    void ignoresDoorayEmailFromSetCookie() {
+        String email = SsoService.extractEmailFromCookies(List.of(
+                "mail=sos@soongsil.dooray.com; Path=/"
+        ));
+
+        assertThat(email).isNull();
+    }
+
+    @Test
+    void resolvesParsedSoongsilEmailBeforeRequestEmail() {
         SsoService service = new SsoService(null, null, null, null, null, null, null, null);
 
         String email = service.resolveEmail(
                 "sos@soongsil.dooray.com",
-                "student@soongsil.dooray.com",
+                "student@soongsil.ac.kr",
                 "20231728"
         );
 
-        assertThat(email).isEqualTo("student@soongsil.dooray.com");
+        assertThat(email).isEqualTo("student@soongsil.ac.kr");
     }
 
     @Test

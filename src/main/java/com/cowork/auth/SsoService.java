@@ -307,7 +307,7 @@ public class SsoService {
                 match(text, "(?:성명|이름)\\s*[:：]?\\s*([가-힣A-Za-z]{2,30})")
         );
         String department = match(text, "(?:소속|학과|학부|전공)\\s*[:：]?\\s*([^\\s]{2,100})");
-        String email = firstText(fallbackEmail, matchEmail(text));
+        String email = firstText(fallbackEmail, matchSoongsilEmail(text));
 
         return new SaintProfile(studentId, defaultString(name), department, email);
     }
@@ -322,27 +322,31 @@ public class SsoService {
         for (String setCookie : setCookies) {
             String email = matchEmail(decodeCookieText(setCookie));
             if (hasTextStatic(email)) {
-                return email.toLowerCase();
+                String normalized = email.toLowerCase();
+                if (isSoongsilEmail(normalized)) {
+                    return normalized;
+                }
             }
         }
         return null;
     }
 
     String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
-        if (isUsableEmail(ssoEmail)) {
+        if (isSoongsilEmail(ssoEmail)) {
             return ssoEmail.trim().toLowerCase();
         }
-        if (isUsableEmail(requestEmail)) {
+        if (isSoongsilEmail(requestEmail)) {
             return requestEmail.trim().toLowerCase();
         }
         return (studentId + "@" + SOONGSIL_MAIL_DOMAIN).toLowerCase();
     }
 
-    private boolean isUsableEmail(String email) {
-        if (!hasText(email)) {
+    private static boolean isSoongsilEmail(String email) {
+        if (!hasTextStatic(email)) {
             return false;
         }
-        return EMAIL_PATTERN.matcher(email.trim()).matches();
+        String normalized = email.trim().toLowerCase();
+        return EMAIL_PATTERN.matcher(normalized).matches() && normalized.endsWith("@" + SOONGSIL_MAIL_DOMAIN);
     }
 
     private String generateInviteCode() {
@@ -384,6 +388,20 @@ public class SsoService {
         }
         Matcher matcher = EMAIL_PATTERN.matcher(text);
         return matcher.find() ? matcher.group().trim() : null;
+    }
+
+    private static String matchSoongsilEmail(String text) {
+        if (!hasTextStatic(text)) {
+            return null;
+        }
+        Matcher matcher = EMAIL_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String email = matcher.group().trim();
+            if (isSoongsilEmail(email)) {
+                return email;
+            }
+        }
+        return null;
     }
 
     private static String decodeCookieText(String value) {
