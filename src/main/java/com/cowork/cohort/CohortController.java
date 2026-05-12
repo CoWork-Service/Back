@@ -59,6 +59,7 @@ public class CohortController {
                                     }
                                     """)))
     })
+
     @GetMapping("/cohorts")
     public ResponseEntity<ApiResponse<List<CohortResponse>>> getCohorts(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -93,7 +94,15 @@ public class CohortController {
             @Parameter(description = "코호트 ID", required = true, example = "3") @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(CohortResponse.of(cohortService.getCohort(id))));
     }
-
+    @GetMapping("/cohorts/previous")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<CohortResponse>>> getPreviousCohorts(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getUser(userDetails);
+        List<CohortResponse> list = cohortService.getPreviousCohorts(user.getOrganization().getId())
+                .stream().map(CohortResponse::of).collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.ok(list));
+    }
     @Operation(
             summary = "코호트 생성 [ADMIN 전용]",
             description = """

@@ -26,6 +26,10 @@ public class CohortService {
     public List<Cohort> getCohorts(Long organizationId) {
         return cohortRepository.findByOrganizationIdOrderByYearDesc(organizationId);
     }
+    public List<Cohort> getPreviousCohorts(Long organizationId) {
+        List<Cohort> all = cohortRepository.findByOrganizationIdOrderByYearDesc(organizationId);
+        return all.size() > 1 ? all.subList(1, all.size()) : List.of();
+    }
 
     public Cohort getCohort(Long id) {
         return cohortRepository.findById(id)
