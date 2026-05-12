@@ -26,4 +26,26 @@ class SsoServiceTest {
 
         assertThat(email).isEqualTo("student@soongsil.ac.kr");
     }
+
+    @Test
+    void resolvesParsedSsoEmailBeforeRequestEmail() {
+        SsoService service = new SsoService(null, null, null, null, null, null, null, null);
+
+        String email = service.resolveEmail(
+                "sos@soongsil.dooray.com",
+                "student@soongsil.dooray.com",
+                "20231728"
+        );
+
+        assertThat(email).isEqualTo("student@soongsil.dooray.com");
+    }
+
+    @Test
+    void fallsBackToStudentIdEmailWhenNoValidEmailExists() {
+        SsoService service = new SsoService(null, null, null, null, null, null, null, null);
+
+        String email = service.resolveEmail(null, null, "20231728");
+
+        assertThat(email).isEqualTo("20231728@soongsil.ac.kr");
+    }
 }

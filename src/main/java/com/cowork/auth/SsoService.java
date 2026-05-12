@@ -328,22 +328,21 @@ public class SsoService {
         return null;
     }
 
-    private String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
-        if (hasText(requestEmail)) {
-            return requestEmail.trim().toLowerCase();
-        }
-        if (isUsableSsoEmail(ssoEmail)) {
+    String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
+        if (isUsableEmail(ssoEmail)) {
             return ssoEmail.trim().toLowerCase();
+        }
+        if (isUsableEmail(requestEmail)) {
+            return requestEmail.trim().toLowerCase();
         }
         return (studentId + "@" + SOONGSIL_MAIL_DOMAIN).toLowerCase();
     }
 
-    private boolean isUsableSsoEmail(String email) {
+    private boolean isUsableEmail(String email) {
         if (!hasText(email)) {
             return false;
         }
-        String normalized = email.trim().toLowerCase();
-        return normalized.endsWith("@" + SOONGSIL_MAIL_DOMAIN);
+        return EMAIL_PATTERN.matcher(email.trim()).matches();
     }
 
     private String generateInviteCode() {
