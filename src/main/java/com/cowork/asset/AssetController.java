@@ -170,7 +170,8 @@ public class AssetController {
                                             "assetId": 1,
                                             "borrowerName": "이철수",
                                             "studentId": "2023001",
-                                            "contact": "010-1234-5678",
+                                            "managerName": "박담당",
+                                            "idCardSubmitted": false,
                                             "rentedAt": "2025-05-01T09:00:00",
                                             "dueAt": "2025-05-08T18:00:00",
                                             "returnedAt": null,
@@ -294,7 +295,8 @@ public class AssetController {
                                         "assetId": 1,
                                         "borrowerName": "김영희",
                                         "studentId": "2024002",
-                                        "contact": "010-9876-5432",
+                                        "managerName": "박담당",
+                                        "idCardSubmitted": false,
                                         "rentedAt": "2025-05-10T15:00:00",
                                         "dueAt": "2025-05-17T18:00:00",
                                         "returnedAt": null,
@@ -326,7 +328,9 @@ public class AssetController {
                             {
                               "borrowerName": "김영희",
                               "studentId": "2024002",
-                              "contact": "010-9876-5432",
+                              "managerName": "박담당",
+                              "idCardSubmitted": false,
+                              "rentedAt": "2025-05-10T15:00:00",
                               "dueAt": "2025-05-17T18:00:00",
                               "quantity": 1,
                               "note": "프로젝트 발표용"
@@ -334,7 +338,20 @@ public class AssetController {
                             """)))
             @RequestBody RentalRequest req) {
         RentalRecord record = assetService.rentAsset(id, req.getBorrowerName(), req.getStudentId(),
-                req.getContact(), req.getDueAt(), req.getQuantity(), req.getNote());
+                req.getManagerName(), req.getIdCardSubmitted(), req.getRentedAt(),
+                req.getDueAt(), req.getQuantity(), req.getNote());
+        return ResponseEntity.ok(ApiResponse.ok(RentalResponse.of(record)));
+    }
+
+    @Operation(summary = "대여 기록 수정", description = "대여자, 담당자, 신분증 제출 여부, 대여일, 반납 예정일, 수량, 비고를 수정합니다.")
+    @PutMapping("/{id}/rentals/{rentalId}")
+    public ResponseEntity<ApiResponse<RentalResponse>> updateRental(
+            @Parameter(description = "자산 ID", required = true, example = "1") @PathVariable Long id,
+            @Parameter(description = "수정할 대여 기록 ID", required = true, example = "10") @PathVariable Long rentalId,
+            @RequestBody RentalRequest req) {
+        RentalRecord record = assetService.updateRental(id, rentalId, req.getBorrowerName(), req.getStudentId(),
+                req.getManagerName(), req.getIdCardSubmitted(), req.getRentedAt(),
+                req.getDueAt(), req.getQuantity(), req.getNote());
         return ResponseEntity.ok(ApiResponse.ok(RentalResponse.of(record)));
     }
 
@@ -360,7 +377,8 @@ public class AssetController {
                                         "assetId": 1,
                                         "borrowerName": "이철수",
                                         "studentId": "2023001",
-                                        "contact": "010-1234-5678",
+                                        "managerName": "박담당",
+                                        "idCardSubmitted": true,
                                         "rentedAt": "2025-05-01T09:00:00",
                                         "dueAt": "2025-05-08T18:00:00",
                                         "returnedAt": "2025-05-08T16:30:00",
@@ -387,7 +405,9 @@ public class AssetController {
     static class RentalRequest {
         private String borrowerName;
         private String studentId;
-        private String contact;
+        private String managerName;
+        private Boolean idCardSubmitted;
+        private LocalDateTime rentedAt;
         private LocalDateTime dueAt;
         private Integer quantity;
         private String note;
@@ -416,11 +436,12 @@ public class AssetController {
     }
 
     record RentalResponse(Long id, Long assetId, String borrowerName, String studentId,
-                          String contact, LocalDateTime rentedAt, LocalDateTime dueAt,
+                          String managerName, Boolean idCardSubmitted, LocalDateTime rentedAt, LocalDateTime dueAt,
                           LocalDateTime returnedAt, Integer quantity, String note) {
         static RentalResponse of(RentalRecord r) {
             return new RentalResponse(r.getId(), r.getAssetId(), r.getBorrowerName(),
-                    r.getStudentId(), r.getContact(), r.getRentedAt(), r.getDueAt(),
+                    r.getStudentId(), r.getManagerName(), Boolean.TRUE.equals(r.getIdCardSubmitted()),
+                    r.getRentedAt(), r.getDueAt(),
                     r.getReturnedAt(), r.getQuantity(), r.getNote());
         }
     }

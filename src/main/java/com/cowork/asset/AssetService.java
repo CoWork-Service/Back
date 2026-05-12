@@ -77,9 +77,10 @@ public class AssetService {
 
     @Transactional
     public RentalRecord rentAsset(Long assetId, String borrowerName, String studentId,
-                                  String contact, LocalDateTime dueAt, Integer quantity, String note) {
+                                  String managerName, Boolean idCardSubmitted,
+                                  LocalDateTime rentedAt, LocalDateTime dueAt, Integer quantity, String note) {
         Asset asset = findById(assetId);
-        int qty = quantity != null ? quantity : 1;
+        int qty = Math.max(1, quantity != null ? quantity : 1);
         if (asset.getAvailableQuantity() < qty) {
             throw new BusinessException(ErrorCode.ASSET_UNAVAILABLE);
         }
@@ -90,13 +91,41 @@ public class AssetService {
                 .assetId(assetId)
                 .borrowerName(borrowerName)
                 .studentId(studentId)
-                .contact(contact)
-                .rentedAt(LocalDateTime.now())
+                .managerName(managerName)
+                .idCardSubmitted(idCardSubmitted != null ? idCardSubmitted : false)
+                .rentedAt(rentedAt != null ? rentedAt : LocalDateTime.now())
                 .dueAt(dueAt)
                 .quantity(qty)
                 .note(note)
                 .build();
         return rentalRepository.save(record);
+    }
+
+    @Transactional
+    public RentalRecord updateRental(Long assetId, Long rentalId, String borrowerName, String studentId,
+                                     String managerName, Boolean idCardSubmitted,
+                                     LocalDateTime rentedAt, LocalDateTime dueAt, Integer quantity, String note) {
+        RentalRecord record = rentalRepository.findById(rentalId)
+                .filter(r -> r.getAssetId().equals(assetId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.RENTAL_NOT_FOUND));
+        Asset asset = findById(assetId);
+
+        Integer nextQuantity = Math.max(1, quantity != null ? quantity : record.getQuantity());
+        if (!record.isReturned() && nextQuantity != null && !nextQuantity.equals(record.getQuantity())) {
+            int delta = nextQuantity - record.getQuantity();
+            if (delta > 0) {
+                if (asset.getAvailableQuantity() < delta) {
+                    throw new BusinessException(ErrorCode.ASSET_UNAVAILABLE);
+                }
+                asset.decreaseAvailable(delta);
+            } else if (delta < 0) {
+                asset.increaseAvailable(-delta);
+            }
+        }
+
+        record.updateRental(borrowerName, studentId, managerName, idCardSubmitted,
+                rentedAt, dueAt, nextQuantity, note);
+        return record;
     }
 
     @Transactional
