@@ -316,7 +316,21 @@ public class SsoService {
     }
 
     private String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
-        return firstText(requestEmail, ssoEmail, studentId + "@" + SOONGSIL_MAIL_DOMAIN).toLowerCase();
+        if (hasText(requestEmail)) {
+            return requestEmail.trim().toLowerCase();
+        }
+        if (isUsableSsoEmail(ssoEmail)) {
+            return ssoEmail.trim().toLowerCase();
+        }
+        return (studentId + "@" + SOONGSIL_MAIL_DOMAIN).toLowerCase();
+    }
+
+    private boolean isUsableSsoEmail(String email) {
+        if (!hasText(email)) {
+            return false;
+        }
+        String normalized = email.trim().toLowerCase();
+        return normalized.endsWith("@" + SOONGSIL_MAIL_DOMAIN);
     }
 
     private String generateInviteCode() {
