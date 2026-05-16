@@ -3,10 +3,13 @@ spring:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:cowork}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
     username: ${MYSQL_USERNAME:${MYSQL_USER:cowork}}
     password: ${MYSQL_PASSWORD:cowork1234}
-
   jpa:
     hibernate:
       ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
     properties:
       hibernate:
         show_sql: false
+clova:
+  ocr:
+    secret-key: ${CLOVA_OCR_SECRET_KEY}
+    invoke-url: ${CLOVA_OCR_INVOKE_URL}

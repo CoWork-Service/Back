@@ -17,8 +17,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Tag(name = "Expense", description = "지출 관리 API — 예산 지출 내역 CRUD, 집계 통계, 영수증 업로드")
@@ -27,9 +29,76 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/expenses")
 @RequiredArgsConstructor
 public class ExpenseController {
-
+    private final BankStatementParser bankStatementParser;
     private final ExpenseService expenseService;
+    private final OcrService ocrService;
+    private final ReceiptMatchService receiptMatchService;
 
+    private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
+    @Operation(summary = "영수증 OCR",
+            description = "영수증 이미지를 업로드하면 결제 일시(분 단위)와 금액을 자동 추출합니다.")
+    @PostMapping("/ocr")
+    public ResponseEntity<ApiResponse<OcrResultResponse>> ocrReceipt(
+            @Parameter(description = "영수증 이미지 파일") @RequestParam MultipartFile file) throws Exception {
+        OcrService.OcrResult result = ocrService.parseReceipt(file);
+        return ResponseEntity.ok(ApiResponse.ok(new OcrResultResponse(
+                result.dateTime() != null ? result.dateTime().format(DT_FMT) : null,
+                result.amount()
+        )));
+    }
+
+    @Operation(summary = "영수증-통장 매칭",
+            description = """
+                영수증 이미지와 통장 엑셀을 함께 업로드하면,
+                OCR로 추출한 결제 시각·금액을 기준으로 ±1분 이내의 거래 내역을 찾아 반환합니다.
+                """)
+    @PostMapping("/match-receipt")
+    public ResponseEntity<ApiResponse<MatchResultResponse>> matchReceipt(
+            @Parameter(description = "영수증 이미지 파일") @RequestParam MultipartFile receipt,
+            @Parameter(description = "통장 거래 내역 엑셀 (.xlsx / .xls)") @RequestParam MultipartFile bankStatement
+    ) throws Exception {
+        OcrService.OcrResult ocr = ocrService.parseReceipt(receipt);
+        List<BankStatementParser.BankRow> bankRows = bankStatementParser.parse(bankStatement);
+
+        Optional<BankStatementParser.BankRow> matched =
+                receiptMatchService.match(ocr.dateTime(), ocr.amount(), bankRows);
+
+        String ocrDateTime = ocr.dateTime() != null ? ocr.dateTime().format(DT_FMT) : null;
+
+        MatchedBankRow matchedRow = matched.map(row -> new MatchedBankRow(
+                row.dateTime() != null ? row.dateTime().format(DT_FMT) : null,
+                row.vendor(),
+                row.amount(),
+                row.description()
+        )).orElse(null);
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                new MatchResultResponse(ocrDateTime, ocr.amount(), matchedRow)
+        ));
+    }
+
+    record OcrResultResponse(String dateTime, Long amount) {}
+
+    record MatchResultResponse(String receiptDateTime, Long receiptAmount, MatchedBankRow matchedBankRow) {}
+
+    record MatchedBankRow(String dateTime, String vendor, Long amount, String description) {}
+
+    @Operation(
+            summary = "통장 엑셀 파싱",
+            description = """
+                통장 거래 내역 엑셀 파일을 업로드하면 거래일시·금액·거래처를 추출합니다.
+                
+                **지원 형식:** .xlsx, .xls
+                
+                **자동 인식 컬럼:** 거래일시, 거래금액, 거래처, 적요/메모
+                """)
+    @PostMapping("/parse-excel")
+    public ResponseEntity<ApiResponse<List<BankStatementParser.BankRow>>> parseExcel(
+            @Parameter(description = "통장 엑셀 파일") @RequestParam MultipartFile file) throws java.io.IOException {
+        List<BankStatementParser.BankRow> rows = bankStatementParser.parse(file);
+        return ResponseEntity.ok(ApiResponse.ok(rows));
+    }
     @Operation(
             summary = "지출 목록 조회",
             description = """
