@@ -111,11 +111,10 @@ public class CoworkEvent extends BaseEntity {
      * 동작: 모든 필드를 새 값으로 교체.
      * 사용 시점: EventService.updateEvent() 에서 호출 (PUT /api/events/{id}).
      */
-    public void update(String name, String category, EventStatus status, String description,
+    public void update(String name, EventStatus status, String description,
                        LocalDate startDate, LocalDate endDate, String location, String leadDepartment,
                        List<String> organizers, Long budget, String coverColor) {
         this.name = name;
-        this.category = category;
         this.status = status;
         this.description = description;
         this.startDate = startDate;

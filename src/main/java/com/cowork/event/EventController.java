@@ -83,9 +83,8 @@ public class EventController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<EventSummaryResponse>>> getEvents(
             @Parameter(description = "코호트 ID (필수)", required = true, example = "5") @RequestParam Long cohortId,
-            @Parameter(description = "행사 상태 필터 (PLANNING / IN_PROGRESS / COMPLETED / CANCELLED)", example = "PLANNING") @RequestParam(required = false) EventStatus status,
-            @Parameter(description = "분류 필터 (예: MT, 축제, 발표회)", example = "MT") @RequestParam(required = false) String category) {
-        List<EventSummaryResponse> events = eventService.getEvents(cohortId, status, category).stream()
+            @Parameter(description = "행사 상태 필터 (PLANNING / IN_PROGRESS / COMPLETED / CANCELLED)", example = "PLANNING") @RequestParam(required = false) EventStatus status) {
+        List<EventSummaryResponse> events = eventService.getEvents(cohortId, status).stream()
                 .map(EventSummaryResponse::of)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(events));
@@ -162,7 +161,7 @@ public class EventController {
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = getUser(userDetails);
         EventService.EventDetail detail = eventService.createEvent(
-                request.getCohortId(), request.getName(), request.getCategory(),
+                request.getCohortId(), request.getName(),
                 request.getStatus(), request.getDescription(), request.getStartDate(),
                 request.getEndDate(), request.getLocation(), request.getLeadDepartment(),
                 request.getOrganizers(), request.getBudget(), request.getCoverColor(), user.getId()
@@ -244,7 +243,7 @@ public class EventController {
                             """)))
             @RequestBody EventRequest request) {
         EventService.EventDetail detail = eventService.updateEvent(
-                id, request.getName(), request.getCategory(), request.getStatus(),
+                id, request.getName(), request.getStatus(),
                 request.getDescription(), request.getStartDate(), request.getEndDate(),
                 request.getLocation(), request.getLeadDepartment(), request.getOrganizers(),
                 request.getBudget(), request.getCoverColor()
@@ -352,7 +351,6 @@ public class EventController {
     static class EventRequest {
         private Long cohortId;
         private String name;
-        private String category;
         private EventStatus status;
         private String description;
         private LocalDate startDate;
@@ -364,13 +362,13 @@ public class EventController {
         private String coverColor;
     }
 
-    record EventSummaryResponse(Long id, Long cohortId, String name, String category, String status,
+    record EventSummaryResponse(Long id, Long cohortId, String name, String status,
                                 String description, LocalDate startDate, LocalDate endDate, String location,
                                 String leadDepartment, List<String> organizers, Long budget, String coverColor,
                                 Long createdBy, LocalDateTime createdAt, LocalDateTime updatedAt) {
         static EventSummaryResponse of(CoworkEvent event) {
             return new EventSummaryResponse(
-                    event.getId(), event.getCohortId(), event.getName(), event.getCategory(),
+                    event.getId(), event.getCohortId(), event.getName(),
                     event.getStatus().toJson(), event.getDescription(), event.getStartDate(),
                     event.getEndDate(), event.getLocation(),
                     event.getLeadDepartment(),
