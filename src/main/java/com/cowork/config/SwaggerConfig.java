@@ -22,7 +22,12 @@ public class SwaggerConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .name("Bearer Authentication")
-                .description("로그인 후 발급받은 Access Token을 입력하세요. (예: eyJhbGciOiJIUzI1NiJ9...)");
+                .description("레거시 호환용 Bearer 토큰입니다. 브라우저 클라이언트는 HttpOnly 쿠키를 사용합니다.");
+        SecurityScheme cookieScheme = new SecurityScheme()
+                .type(SecurityScheme.Type.APIKEY)
+                .in(SecurityScheme.In.COOKIE)
+                .name("cowork_access_token")
+                .description("로그인/회원가입/SSO/refresh 응답의 Set-Cookie로 발급되는 HttpOnly Access 쿠키입니다.");
 
         return new OpenAPI()
                 .info(new Info()
@@ -33,9 +38,9 @@ public class SwaggerConfig {
                                 코워크 플랫폼의 REST API 명세입니다.
 
                                 ### 인증 방식
-                                - `POST /api/auth/login` 또는 `POST /api/auth/register`로 Access Token과 Refresh Token을 발급받습니다.
-                                - 인증이 필요한 API는 요청 헤더에 `Authorization: Bearer {accessToken}`을 포함해야 합니다.
-                                - Access Token이 만료(401)되면 `POST /api/auth/refresh`로 재발급하세요.
+                                - `POST /api/auth/login`, `POST /api/auth/register`, SSO 콜백/가입에서 Access/Refresh JWT를 HttpOnly 쿠키로 발급합니다.
+                                - 인증이 필요한 브라우저 API 요청은 쿠키가 포함되도록 `credentials: include`로 호출합니다.
+                                - Access 쿠키가 만료(401)되면 `POST /api/auth/refresh`로 쿠키를 재발급하세요.
 
                                 ### 공통 응답 형식
                                 ```json
@@ -72,8 +77,10 @@ public class SwaggerConfig {
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("로컬 개발 서버"),
                         new Server().url("https://api.cowork.example.com").description("운영 서버")))
+                .addSecurityItem(new SecurityRequirement().addList("Auth Cookie"))
                 .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
                 .components(new Components()
+                        .addSecuritySchemes("Auth Cookie", cookieScheme)
                         .addSecuritySchemes("Bearer Authentication", bearerScheme));
     }
 }

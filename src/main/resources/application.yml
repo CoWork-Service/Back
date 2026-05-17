@@ -43,6 +43,14 @@ jwt:
   access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600}
   refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:604800}
 
+auth:
+  cookie:
+    access-name: ${AUTH_ACCESS_COOKIE_NAME:cowork_access_token}
+    refresh-name: ${AUTH_REFRESH_COOKIE_NAME:cowork_refresh_token}
+    secure: ${AUTH_COOKIE_SECURE:false}
+    same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    domain: ${AUTH_COOKIE_DOMAIN:}
+
 server:
   port: ${SERVER_PORT:8080}
 

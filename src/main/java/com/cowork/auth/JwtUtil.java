@@ -72,6 +72,10 @@ public class JwtUtil {
         return false;
     }
 
+    public long getAccessTokenExpiry() {
+        return accessTokenExpiry;
+    }
+
     public long getRefreshTokenExpiry() {
         return refreshTokenExpiry;
     }

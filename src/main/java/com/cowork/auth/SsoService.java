@@ -77,7 +77,7 @@ public class SsoService {
     private boolean allowUnverifiedFallback;
 
     @Transactional
-    public String handleSsoCallback(String sToken, String sIdno) {
+    public SsoCallbackResult handleSsoCallback(String sToken, String sIdno) {
         try {
             if (!hasText(sToken) || !hasText(sIdno)) {
                 throw new BusinessException(ErrorCode.INVALID_SSO_TOKEN);
@@ -99,10 +99,10 @@ public class SsoService {
                     .expiresAt(LocalDateTime.now().plusSeconds(tempTokenExpirySeconds))
                     .build());
 
-            return redirect("/onboarding", Map.of("tempToken", tempToken));
+            return new SsoCallbackResult(redirect("/onboarding", Map.of("tempToken", tempToken)), null);
         } catch (Exception e) {
             log.warn("SSO callback failed: {}", e.getMessage());
-            return redirect("/login", Map.of("error", "SSO 로그인에 실패했습니다."));
+            return new SsoCallbackResult(redirect("/login", Map.of("error", "SSO 로그인에 실패했습니다.")), null);
         }
     }
 
@@ -131,27 +131,26 @@ public class SsoService {
         return response;
     }
 
-    private String redirectExistingUser(User user, SaintProfile profile) {
+    private SsoCallbackResult redirectExistingUser(User user, SaintProfile profile) {
         if (user.getJoinStatus() == JoinStatus.PENDING) {
-            return redirect("/pending", Map.of(
+            return new SsoCallbackResult(redirect("/pending", Map.of(
                     "studentId", defaultString(user.getStudentId()),
                     "name", user.getName()
-            ));
+            )), null);
         }
 
         TokenResponse token = authService.issueTokens(user);
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("accessToken", token.getAccessToken());
-        params.put("refreshToken", token.getRefreshToken());
         params.put("userId", String.valueOf(token.getUserId()));
         params.put("name", token.getName());
+        params.put("email", token.getEmail());
         params.put("studentId", defaultString(user.getStudentId()));
         params.put("department", firstText(user.getOrganization().getDepartment(), profile.department()));
         params.put("organizationId", String.valueOf(user.getOrganization().getId()));
         params.put("organizationName", user.getOrganization().getName());
         params.put("joinStatus", token.getJoinStatus());
         params.put("hasCouncil", "true");
-        return redirect("/main", params);
+        return new SsoCallbackResult(redirect("/main", params), token);
     }
 
     private TokenResponse createCouncil(SsoRegisterRequest req, SsoTempToken tempToken, String email) {
@@ -523,5 +522,8 @@ public class SsoService {
     }
 
     private record SaintProfile(String studentId, String name, String department, String email) {
+    }
+
+    public record SsoCallbackResult(String redirectUrl, TokenResponse tokenResponse) {
     }
 }

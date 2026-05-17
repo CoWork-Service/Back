@@ -15,12 +15,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Auth", description = "인증 API — 회원가입, 로그인, 토큰 갱신, 로그아웃, 내 정보 조회")
@@ -32,6 +34,7 @@ public class AuthController {
     private final AuthService authService;
     private final SsoService ssoService;
     private final UserRepository userRepository;
+    private final AuthCookieService authCookieService;
 
     @Operation(summary = "숭실대 SSO 콜백", description = "SmartID SSO 인증 성공 후 sToken/sIdno를 받아 프론트로 리다이렉트합니다.")
     @GetMapping("/sso/callback")
@@ -39,7 +42,11 @@ public class AuthController {
             @RequestParam(required = false) String sToken,
             @RequestParam(required = false) String sIdno,
             HttpServletResponse response) throws java.io.IOException {
-        response.sendRedirect(ssoService.handleSsoCallback(sToken, sIdno));
+        SsoService.SsoCallbackResult result = ssoService.handleSsoCallback(sToken, sIdno);
+        if (result.tokenResponse() != null) {
+            authCookieService.addAuthCookies(response, result.tokenResponse());
+        }
+        response.sendRedirect(result.redirectUrl());
     }
 
     @Operation(summary = "SSO 신규 사용자 프로필 조회", description = "SSO 콜백에서 발급된 tempToken으로 학생 프로필을 조회합니다.")
@@ -50,8 +57,12 @@ public class AuthController {
 
     @Operation(summary = "SSO 온보딩 가입", description = "SSO 신규 사용자가 학생회를 생성하거나 기존 학생회에 가입 신청합니다.")
     @PostMapping("/sso/register")
-    public ResponseEntity<ApiResponse<TokenResponse>> ssoRegister(@RequestBody SsoRegisterRequest req) {
-        return ResponseEntity.ok(ApiResponse.ok(ssoService.ssoRegister(req)));
+    public ResponseEntity<ApiResponse<TokenResponse>> ssoRegister(
+            @RequestBody SsoRegisterRequest req,
+            HttpServletResponse response) {
+        TokenResponse token = ssoService.ssoRegister(req);
+        authCookieService.addAuthCookies(response, token);
+        return ResponseEntity.ok(ApiResponse.ok(token.withoutTokens()));
     }
 
     @Operation(
@@ -65,7 +76,7 @@ public class AuthController {
                     1. 초대코드로 조직(Organization) 조회
                     2. 이메일 중복 확인
                     3. 사용자 생성 (joinStatus = PENDING, 관리자 승인 대기)
-                    4. Access Token + Refresh Token 발급 후 반환
+                    4. Access Token + Refresh Token을 HttpOnly 쿠키로 발급
 
                     **주의:** 가입 직후에는 joinStatus가 PENDING 상태입니다.
                     관리자가 `POST /api/org/pending/{userId}/approve`로 승인해야 정상 사용 가능합니다.
@@ -77,8 +88,6 @@ public class AuthController {
                                     {
                                       "success": true,
                                       "data": {
-                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzE1MzI4MDAwLCJleHAiOjE3MTUzMzE2MDB9.abc123",
-                                        "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzE1MzI4MDAwLCJleHAiOjE3MTU5MzI4MDB9.def456",
                                         "userId": 1,
                                         "name": "홍길동",
                                         "email": "hong@example.com",
@@ -112,8 +121,11 @@ public class AuthController {
                               "inviteCode": "XK9M2P7Q4R8T1AZ6"
                             }
                             """)))
-            @Valid @RequestBody RegisterRequest req) {
-        return ResponseEntity.ok(ApiResponse.ok(authService.register(req)));
+            @Valid @RequestBody RegisterRequest req,
+            HttpServletResponse response) {
+        TokenResponse token = authService.register(req);
+        authCookieService.addAuthCookies(response, token);
+        return ResponseEntity.ok(ApiResponse.ok(token.withoutTokens()));
     }
 
     @Operation(
@@ -127,10 +139,9 @@ public class AuthController {
                     1. 이메일로 사용자 조회
                     2. 비밀번호 검증 (BCrypt)
                     3. 계정 활성 여부 확인 (ACTIVE 상태만 로그인 가능)
-                    4. 기존 Refresh Token 삭제 후 새 Access Token + Refresh Token 발급
+                    4. 기존 Refresh Token 삭제 후 새 Access Token + Refresh Token을 HttpOnly 쿠키로 발급
 
-                    **토큰 사용법:** 응답받은 `accessToken`을 이후 API 호출 시
-                    `Authorization: Bearer {accessToken}` 헤더에 포함하세요.
+                    **인증 쿠키:** 응답의 `Set-Cookie`로 내려간 HttpOnly 쿠키가 이후 API 요청에 자동 포함됩니다.
                     """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그인 성공",
@@ -139,8 +150,6 @@ public class AuthController {
                                     {
                                       "success": true,
                                       "data": {
-                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzE1MzI4MDAwLCJleHAiOjE3MTUzMzE2MDB9.abc123",
-                                        "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzE1MzI4MDAwLCJleHAiOjE3MTU5MzI4MDB9.def456",
                                         "userId": 1,
                                         "name": "홍길동",
                                         "email": "hong@example.com",
@@ -172,8 +181,11 @@ public class AuthController {
                               "password": "password123!"
                             }
                             """)))
-            @Valid @RequestBody LoginRequest req) {
-        return ResponseEntity.ok(ApiResponse.ok(authService.login(req)));
+            @Valid @RequestBody LoginRequest req,
+            HttpServletResponse response) {
+        TokenResponse token = authService.login(req);
+        authCookieService.addAuthCookies(response, token);
+        return ResponseEntity.ok(ApiResponse.ok(token.withoutTokens()));
     }
 
     @Operation(
@@ -185,9 +197,9 @@ public class AuthController {
 
                     **처리 순서:**
                     1. Refresh Token 유효성 검증 (DB 조회 + 만료 여부 확인)
-                    2. 새 Access Token + Refresh Token 발급 (기존 Refresh Token 교체)
+                    2. 새 Access Token + Refresh Token을 HttpOnly 쿠키로 발급 (기존 Refresh Token 교체)
 
-                    **인증 헤더 불필요** — Refresh Token 자체가 인증 수단입니다.
+                    **인증 헤더 불필요** — HttpOnly Refresh 쿠키가 인증 수단입니다.
                     """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "토큰 갱신 성공",
@@ -196,8 +208,6 @@ public class AuthController {
                                     {
                                       "success": true,
                                       "data": {
-                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9.NEW_ACCESS_TOKEN.xyz789",
-                                        "refreshToken": "eyJhbGciOiJIUzI1NiJ9.NEW_REFRESH_TOKEN.uvw123",
                                         "userId": 1,
                                         "name": "홍길동",
                                         "email": "hong@example.com",
@@ -221,15 +231,24 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<TokenResponse>> refresh(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Refresh Token",
-                    required = true,
+                    description = "레거시 호환용 Refresh Token 본문입니다. 브라우저 클라이언트는 HttpOnly Refresh 쿠키를 사용합니다.",
+                    required = false,
                     content = @Content(examples = @ExampleObject(value = """
                             {
                               "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzE1MzI4MDAwLCJleHAiOjE3MTU5MzI4MDB9.def456"
                             }
                             """)))
-            @RequestBody RefreshRequest req) {
-        return ResponseEntity.ok(ApiResponse.ok(authService.refresh(req.getRefreshToken())));
+            @RequestBody(required = false) RefreshRequest req,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        String refreshToken = authCookieService.resolveRefreshToken(request);
+        if (!StringUtils.hasText(refreshToken) && req != null) {
+            refreshToken = req.getRefreshToken();
+        }
+
+        TokenResponse token = authService.refresh(refreshToken);
+        authCookieService.addAuthCookies(response, token);
+        return ResponseEntity.ok(ApiResponse.ok(token.withoutTokens()));
     }
 
     @Operation(
@@ -239,7 +258,7 @@ public class AuthController {
 
                     **사용 시점:** 사용자가 로그아웃 버튼을 클릭할 때.
 
-                    **주의:** Access Token은 만료 시까지 유효하므로 클라이언트에서도 토큰을 삭제해야 합니다.
+                    **주의:** 서버 Refresh Token을 삭제하고 인증 쿠키를 만료 처리합니다.
                     """,
             security = @SecurityRequirement(name = "Bearer Authentication"))
     @ApiResponses({
@@ -256,8 +275,16 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료")
     })
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(@AuthenticationPrincipal UserDetails userDetails) {
-        authService.logout(Long.parseLong(userDetails.getUsername()));
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        if (userDetails != null) {
+            authService.logout(Long.parseLong(userDetails.getUsername()));
+        } else {
+            authService.logoutByRefreshToken(authCookieService.resolveRefreshToken(request));
+        }
+        authCookieService.clearAuthCookies(response);
         return ResponseEntity.ok(ApiResponse.ok());
     }
 

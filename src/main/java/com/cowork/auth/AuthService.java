@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -126,6 +127,10 @@ public class AuthService {
 
     @Transactional
     public TokenResponse refresh(String refreshTokenStr) {
+        if (!StringUtils.hasText(refreshTokenStr)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
         RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenStr)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
 
@@ -143,6 +148,14 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         refreshTokenRepository.deleteByUser(user);
+    }
+
+    @Transactional
+    public void logoutByRefreshToken(String refreshTokenStr) {
+        if (!StringUtils.hasText(refreshTokenStr)) {
+            return;
+        }
+        refreshTokenRepository.findByToken(refreshTokenStr).ifPresent(refreshTokenRepository::delete);
     }
 
     public TokenResponse issueTokens(User user) {

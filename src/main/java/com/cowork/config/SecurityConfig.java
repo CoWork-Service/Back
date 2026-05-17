@@ -1,5 +1,7 @@
 package com.cowork.config;
 
+import com.cowork.auth.AuthCookieService;
+import com.cowork.auth.CookieOriginFilter;
 import com.cowork.auth.JwtAuthenticationFilter;
 import com.cowork.auth.JwtUtil;
 import com.cowork.user.UserDetailsServiceImpl;
@@ -28,6 +30,8 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsServiceImpl userDetailsService;
+    private final AuthCookieService authCookieService;
+    private final CookieOriginFilter cookieOriginFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -38,7 +42,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Public endpoints
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/sso/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/logout", "/api/auth/sso/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/surveys/*").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/surveys/*/respond").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/timetables/*").permitAll()
@@ -52,14 +56,15 @@ public class SecurityConfig {
                 // All other requests require authentication
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(cookieOriginFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(jwtAuthenticationFilter(), CookieOriginFilter.class);
 
         return http.build();
     }
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtUtil, userDetailsService);
+        return new JwtAuthenticationFilter(jwtUtil, userDetailsService, authCookieService);
     }
 
     @Bean
