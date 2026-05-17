@@ -28,6 +28,7 @@ MYSQL_USERNAME=cowork
 MYSQL_PASSWORD=<app-password>
 APP_IMAGE=cowork-backend:latest
 APP_CONTAINER_NAME=cowork-backend
+BACKEND_DOMAIN=3-35-27-121.nip.io
 SPRING_PROFILES_ACTIVE=prod
 HIBERNATE_DDL_AUTO=validate
 JWT_SECRET=<at-least-32-byte-secret>

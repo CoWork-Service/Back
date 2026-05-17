@@ -200,8 +200,13 @@ jobs:
         if: steps.deployment_secrets.outputs.ready == 'true'
         shell: bash
         run: |
+          set -euo pipefail
+          set -a
+          source deploy/.env
+          set +a
+          verify_host="${BACKEND_DOMAIN:-3-35-27-121.nip.io}"
           for attempt in {1..30}; do
-            if curl -kfsS --max-time 10 "https://$EC2_HOST/v3/api-docs" >/dev/null; then
+            if curl -kfsS --max-time 10 "https://$verify_host/v3/api-docs" >/dev/null; then
               exit 0
             fi
             echo "backend verification attempt ${attempt} failed; retrying..."
