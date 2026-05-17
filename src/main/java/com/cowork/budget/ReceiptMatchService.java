@@ -1,4 +1,4 @@
-package com.cowork.budget;
+package com.cowork.budget
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
