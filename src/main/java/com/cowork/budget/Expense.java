@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * 지출 내역(Expense) 엔티티
@@ -76,6 +77,10 @@ public class Expense extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    /** OCR 추출 결제 시각 (영수증 기준, 통장 대사 매칭에 사용) */
+    @Column(name = "receipt_datetime")
+    private LocalDateTime receiptDatetime;
+
     /** 연결된 행사 ID (행사 지출인 경우 설정, 선택) */
     @Column(name = "event_id")
     private Long eventId;
@@ -87,7 +92,8 @@ public class Expense extends BaseEntity {
      * 사용 시점: ExpenseService.updateExpense() 에서 호출 (PUT /api/expenses/{id}).
      */
     public void update(LocalDate date, String department, String category, String vendor,
-                       String description, Long amount, String paymentMethod, String note, Long eventId) {
+                       String description, Long amount, String paymentMethod, String note, Long eventId,
+                       LocalDateTime receiptDatetime) {
         this.date = date;
         this.department = department;
         this.category = category;
@@ -97,6 +103,7 @@ public class Expense extends BaseEntity {
         this.paymentMethod = paymentMethod;
         this.note = note;
         this.eventId = eventId;
+        if (receiptDatetime != null) this.receiptDatetime = receiptDatetime;
     }
 
     /**

@@ -263,9 +263,11 @@ public class ExpenseController {
             @Parameter(description = "관리자 메모") @RequestParam(required = false) String note,
             @Parameter(description = "연결할 행사 ID") @RequestParam(required = false) Long eventId,
             @Parameter(description = "증빙으로 연결할 행사 사진 ID 목록") @RequestParam(required = false) List<Long> photoIds,
+            @Parameter(description = "OCR 추출 결제 시각 (yyyy-MM-dd'T'HH:mm)") @RequestParam(required = false) String receiptDatetime,
             @Parameter(description = "영수증 파일 (이미지 또는 PDF)") @RequestParam(required = false) MultipartFile receipt) {
         Expense expense = expenseService.createExpense(cohortId, date, department, category, vendor,
-                description, amount, paymentMethod, note, eventId, receipt, photoIds);
+                description, amount, paymentMethod, note, eventId, parseReceiptDatetime(receiptDatetime),
+                receipt, photoIds);
         return ResponseEntity.ok(ApiResponse.ok(ExpenseResponse.of(expense, expenseService.getPhotoIds(expense.getId()))));
     }
 
@@ -340,9 +342,11 @@ public class ExpenseController {
             @Parameter(description = "관리자 메모") @RequestParam(required = false) String note,
             @Parameter(description = "연결 행사 ID") @RequestParam(required = false) Long eventId,
             @Parameter(description = "증빙으로 연결할 행사 사진 ID 목록") @RequestParam(required = false) List<Long> photoIds,
+            @Parameter(description = "OCR 추출 결제 시각 (yyyy-MM-dd'T'HH:mm)") @RequestParam(required = false) String receiptDatetime,
             @Parameter(description = "새 영수증 파일 (없으면 기존 파일 유지)") @RequestParam(required = false) MultipartFile receipt) {
         Expense expense = expenseService.updateExpense(id, date, department, category, vendor,
-                description, amount, paymentMethod, note, eventId, receipt, photoIds);
+                description, amount, paymentMethod, note, eventId, parseReceiptDatetime(receiptDatetime),
+                receipt, photoIds);
         return ResponseEntity.ok(ApiResponse.ok(ExpenseResponse.of(expense, expenseService.getPhotoIds(expense.getId()))));
     }
 
@@ -371,14 +375,23 @@ public class ExpenseController {
     record ExpenseResponse(Long id, Long cohortId, LocalDate date, String department, String category,
                            String vendor, String description, Long amount, String paymentMethod,
                            String receiptStoragePath, String receiptUrl, List<Long> photoIds, String note, Long eventId,
-                           LocalDateTime createdAt, LocalDateTime updatedAt) {
+                           LocalDateTime receiptDatetime, LocalDateTime createdAt, LocalDateTime updatedAt) {
         static ExpenseResponse of(Expense e, List<Long> photoIds) {
             return new ExpenseResponse(e.getId(), e.getCohortId(), e.getDate(),
                     e.getDepartment(), e.getCategory(), e.getVendor(), e.getDescription(),
                     e.getAmount(), e.getPaymentMethod(), e.getReceiptStoragePath(),
                     e.getReceiptStoragePath() != null ? "/uploads/" + e.getReceiptStoragePath() : null,
                     photoIds, e.getNote(),
-                    e.getEventId(), e.getCreatedAt(), e.getUpdatedAt());
+                    e.getEventId(), e.getReceiptDatetime(), e.getCreatedAt(), e.getUpdatedAt());
+        }
+    }
+
+    private LocalDateTime parseReceiptDatetime(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return LocalDateTime.parse(value, DT_FMT);
+        } catch (Exception e) {
+            return null;
         }
     }
 }

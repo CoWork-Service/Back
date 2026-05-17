@@ -41,12 +41,19 @@ public class BankStatementParser {
             int amountCol = header.amountCol() >= 0 ? header.amountCol() : 1;
             int vendorCol = header.vendorCol() >= 0 ? header.vendorCol() : 2;
             int descCol = header.descCol();
+            int typeCol = header.typeCol();
 
             for (int i = header.dataStartRow(); i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
                 try {
+                    // 구분 컬럼이 있으면 "출금" 행만 처리 (입금 행 제외)
+                    if (typeCol >= 0) {
+                        String type = getCellString(row.getCell(typeCol));
+                        if (!type.contains("출금")) continue;
+                    }
+
                     LocalDateTime dateTime = parseCellDateTime(row.getCell(dateCol), timeCol >= 0 ? row.getCell(timeCol) : null);
                     Long amount = parseAmount(row.getCell(amountCol));
                     String vendor = getCellString(row.getCell(vendorCol));
@@ -89,11 +96,12 @@ public class BankStatementParser {
     }
 
     private HeaderInfo inspectHeaderRow(Row row, int rowIndex) {
-        int dateCol = -1, timeCol = -1, withdrawalCol = -1, amountCol = -1, vendorCol = -1, descCol = -1;
+        int dateCol = -1, timeCol = -1, withdrawalCol = -1, amountCol = -1, vendorCol = -1, descCol = -1, typeCol = -1;
         int score = 0;
 
         for (Cell cell : row) {
             String value = normalizeHeader(getCellString(cell));
+            String raw = getCellString(cell).trim();
             if (!StringUtils.hasText(value)) continue;
 
             int idx = cell.getColumnIndex();
@@ -105,7 +113,7 @@ public class BankStatementParser {
                 score += 1;
             }
 
-            if (containsAny(value, "출금금액", "출금액", "출금", "지급금액", "찾으신금액", "사용금액")) {
+            if (containsAny(value, "출금금액", "출금액", "지급금액", "찾으신금액", "사용금액")) {
                 withdrawalCol = idx;
                 score += 3;
             } else if (containsAny(value, "거래금액", "금액", "금액원")) {
@@ -120,9 +128,15 @@ public class BankStatementParser {
                 descCol = idx;
                 score += 1;
             }
+
+            // "구분" (입금/출금 구분): exact match only to avoid colliding with 거래구분 etc.
+            if (raw.equals("구분") || containsAny(value, "입출금구분", "입출금여부")) {
+                typeCol = idx;
+                score += 1;
+            }
         }
 
-        return new HeaderInfo(rowIndex + 1, dateCol, timeCol, withdrawalCol >= 0 ? withdrawalCol : amountCol, vendorCol, descCol, score);
+        return new HeaderInfo(rowIndex + 1, dateCol, timeCol, withdrawalCol >= 0 ? withdrawalCol : amountCol, vendorCol, descCol, typeCol, score);
     }
 
     private String normalizeHeader(String value) {
@@ -241,9 +255,9 @@ public class BankStatementParser {
         return dataFormatter.formatCellValue(cell).trim();
     }
 
-    private record HeaderInfo(int dataStartRow, int dateCol, int timeCol, int amountCol, int vendorCol, int descCol, int score) {
+    private record HeaderInfo(int dataStartRow, int dateCol, int timeCol, int amountCol, int vendorCol, int descCol, int typeCol, int score) {
         static HeaderInfo fallback() {
-            return new HeaderInfo(1, -1, -1, -1, -1, -1, 0);
+            return new HeaderInfo(1, -1, -1, -1, -1, -1, -1, 0);
         }
     }
 }
