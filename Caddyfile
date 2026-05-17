@@ -1,4 +1,11 @@
 {$BACKEND_DOMAIN:3-35-27-121.nip.io} {
 	encode gzip
+
+	@direct_sso_callback {
+		path /api/auth/sso/callback
+		not header X-Cowork-CloudFront true
+	}
+	redir @direct_sso_callback https://cowork.kro.kr{uri} 302
+
 	reverse_proxy app:8080
 }
