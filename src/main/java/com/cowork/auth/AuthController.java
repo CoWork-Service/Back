@@ -329,7 +329,7 @@ public class AuthController {
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
         Long userId = Long.parseLong(userDetails.getUsername());
-        User user = userRepository.findById(userId)
+        User user = userRepository.findWithOrganizationById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         PolicyConsentService.ConsentStatus consentStatus = policyConsentService.getStatus(user.getId());
         return ResponseEntity.ok(ApiResponse.ok(new MeResponse(user.getId(), user.getName(), user.getEmail(),
