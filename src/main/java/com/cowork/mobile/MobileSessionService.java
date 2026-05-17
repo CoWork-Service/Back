@@ -57,6 +57,13 @@ public class MobileSessionService {
         return getSession(token);
     }
 
+    public void validateOcrAllowed(String token) {
+        MobileSession session = getSession(token);
+        if (session.isExpired()) {
+            throw new BusinessException(ErrorCode.MOBILE_SESSION_EXPIRED);
+        }
+    }
+
     @Transactional
     public Expense createExpense(String token, LocalDate date, String department, String category,
                                  String vendor, String description, Long amount, String paymentMethod,

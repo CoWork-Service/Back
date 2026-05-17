@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Tag(name = "Expense", description = "지출 관리 API — 예산 지출 내역 CRUD, 집계 통계, 영수증 업로드")
@@ -36,15 +35,12 @@ public class ExpenseController {
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
     @Operation(summary = "영수증 OCR",
-            description = "영수증 이미지를 업로드하면 결제 일시(분 단위)와 금액을 자동 추출합니다.")
+            description = "영수증 이미지를 업로드하면 지출 등록 폼에 맞는 날짜, 사용처, 금액, 결제수단, 카테고리 등을 자동 추출합니다.")
     @PostMapping("/ocr")
-    public ResponseEntity<ApiResponse<OcrResultResponse>> ocrReceipt(
+    public ResponseEntity<ApiResponse<ReceiptOcrResponse>> ocrReceipt(
             @Parameter(description = "영수증 이미지 파일") @RequestParam MultipartFile file) throws Exception {
         OcrService.OcrResult result = ocrService.parseReceipt(file);
-        return ResponseEntity.ok(ApiResponse.ok(new OcrResultResponse(
-                result.dateTime() != null ? result.dateTime().format(DT_FMT) : null,
-                result.amount()
-        )));
+        return ResponseEntity.ok(ApiResponse.ok(ReceiptOcrResponse.of(result)));
     }
 
     @Operation(summary = "영수증-통장 매칭",
@@ -59,29 +55,37 @@ public class ExpenseController {
     ) throws Exception {
         OcrService.OcrResult ocr = ocrService.parseReceipt(receipt);
         List<BankStatementParser.BankRow> bankRows = bankStatementParser.parse(bankStatement);
+        ReceiptMatchService.MatchResult match = receiptMatchService.match(ocr, bankRows);
+        ReceiptOcrResponse receiptResponse = ReceiptOcrResponse.of(ocr);
 
-        Optional<BankStatementParser.BankRow> matched =
-                receiptMatchService.match(ocr.dateTime(), ocr.amount(), bankRows);
-
-        String ocrDateTime = ocr.dateTime() != null ? ocr.dateTime().format(DT_FMT) : null;
-
-        MatchedBankRow matchedRow = matched.map(row -> new MatchedBankRow(
-                row.dateTime() != null ? row.dateTime().format(DT_FMT) : null,
-                row.vendor(),
-                row.amount(),
-                row.description()
-        )).orElse(null);
+        MatchedBankRow matchedRow = match.bankRow() != null ? new MatchedBankRow(
+                match.bankRow().dateTime() != null ? match.bankRow().dateTime().format(DT_FMT) : null,
+                match.bankRow().vendor(),
+                match.bankRow().amount(),
+                match.bankRow().description(),
+                match.timeDifferenceMinutes()
+        ) : null;
 
         return ResponseEntity.ok(ApiResponse.ok(
-                new MatchResultResponse(ocrDateTime, ocr.amount(), matchedRow)
+                new MatchResultResponse(
+                        receiptResponse,
+                        receiptResponse.dateTime(),
+                        receiptResponse.amount(),
+                        matchedRow,
+                        match.matched(),
+                        match.confidence(),
+                        match.reason(),
+                        match.candidateCount()
+                )
         ));
     }
 
-    record OcrResultResponse(String dateTime, Long amount) {}
+    record MatchResultResponse(ReceiptOcrResponse receipt, String receiptDateTime, Long receiptAmount,
+                               MatchedBankRow matchedBankRow, boolean matched, double matchConfidence,
+                               String matchReason, int candidateCount) {}
 
-    record MatchResultResponse(String receiptDateTime, Long receiptAmount, MatchedBankRow matchedBankRow) {}
-
-    record MatchedBankRow(String dateTime, String vendor, Long amount, String description) {}
+    record MatchedBankRow(String dateTime, String vendor, Long amount, String description,
+                          Long timeDifferenceMinutes) {}
 
     @Operation(
             summary = "통장 엑셀 파싱",

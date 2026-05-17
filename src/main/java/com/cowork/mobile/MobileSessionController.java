@@ -1,6 +1,8 @@
 package com.cowork.mobile;
 
 import com.cowork.budget.Expense;
+import com.cowork.budget.OcrService;
+import com.cowork.budget.ReceiptOcrResponse;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
@@ -31,6 +33,7 @@ import java.util.Map;
 public class MobileSessionController {
 
     private final MobileSessionService mobileSessionService;
+    private final OcrService ocrService;
     private final UserRepository userRepository;
 
     @Operation(
@@ -165,6 +168,24 @@ public class MobileSessionController {
             @Parameter(description = "추가 메타데이터 (JSON 문자열)", example = "{\"vendor\":\"스타벅스\",\"amount\":\"15000\"}") @RequestParam(required = false) String extraData) {
         MobileSession session = mobileSessionService.upload(token, photo, extraData);
         return ResponseEntity.ok(ApiResponse.ok(MobileUploadResponse.of(session)));
+    }
+
+    @Operation(
+            summary = "모바일 영수증 OCR (인증 불필요)",
+            description = """
+                    모바일 세션 토큰으로 영수증 이미지를 OCR 분석합니다.
+
+                    **사용 시점:** 모바일 지출 등록 화면에서 사진 선택 직후 날짜·거래처·금액을 자동 채울 때.
+
+                    세션 토큰이 유효하고 만료되지 않은 경우에만 호출할 수 있습니다.
+                    """)
+    @PostMapping("/{token}/ocr")
+    public ResponseEntity<ApiResponse<ReceiptOcrResponse>> ocr(
+            @Parameter(description = "세션 토큰", required = true) @PathVariable String token,
+            @Parameter(description = "영수증 이미지 파일", required = true) @RequestParam MultipartFile file) throws Exception {
+        mobileSessionService.validateOcrAllowed(token);
+        OcrService.OcrResult result = ocrService.parseReceipt(file);
+        return ResponseEntity.ok(ApiResponse.ok(ReceiptOcrResponse.of(result)));
     }
 
     @Operation(

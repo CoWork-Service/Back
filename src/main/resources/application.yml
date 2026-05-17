@@ -33,6 +33,11 @@ file:
       region: ${AWS_REGION:ap-northeast-2}
       key-prefix: ${AWS_S3_KEY_PREFIX:}
 
+clova:
+  ocr:
+    secret-key: ${CLOVA_OCR_SECRET_KEY:}
+    invoke-url: ${CLOVA_OCR_INVOKE_URL:}
+
 jwt:
   secret: ${JWT_SECRET:cowork-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm}
   access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600}

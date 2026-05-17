@@ -34,6 +34,8 @@ public enum ErrorCode {
 
     // Budget
     EXPENSE_NOT_FOUND(404, "지출 내역을 찾을 수 없습니다"),
+    OCR_CONFIG_MISSING(500, "OCR 설정이 누락되었습니다"),
+    OCR_FAILED(502, "영수증 OCR 처리에 실패했습니다"),
 
     // Asset
     ASSET_NOT_FOUND(404, "자산을 찾을 수 없습니다"),

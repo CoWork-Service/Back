@@ -24,6 +24,8 @@ env:
   AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  CLOVA_OCR_SECRET_KEY: ${{ secrets.CLOVA_OCR_SECRET_KEY }}
+  CLOVA_OCR_INVOKE_URL: ${{ secrets.CLOVA_OCR_INVOKE_URL }}
 
 jobs:
   deploy:
@@ -44,6 +46,8 @@ jobs:
           if [ -z "$AWS_S3_BUCKET" ]; then missing+=("AWS_S3_BUCKET"); fi
           if [ -z "$AWS_ACCESS_KEY_ID" ]; then missing+=("AWS_ACCESS_KEY_ID"); fi
           if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then missing+=("AWS_SECRET_ACCESS_KEY"); fi
+          if [ -z "$CLOVA_OCR_SECRET_KEY" ]; then missing+=("CLOVA_OCR_SECRET_KEY"); fi
+          if [ -z "$CLOVA_OCR_INVOKE_URL" ]; then missing+=("CLOVA_OCR_INVOKE_URL"); fi
 
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::warning::Skipping EC2 deployment. Missing secrets: ${missing[*]}"
@@ -88,6 +92,8 @@ jobs:
             printf 'AWS_S3_BUCKET=%s\n' "$AWS_S3_BUCKET"
             printf 'AWS_ACCESS_KEY_ID=%s\n' "$AWS_ACCESS_KEY_ID"
             printf 'AWS_SECRET_ACCESS_KEY=%s\n' "$AWS_SECRET_ACCESS_KEY"
+            printf 'CLOVA_OCR_SECRET_KEY=%s\n' "$CLOVA_OCR_SECRET_KEY"
+            printf 'CLOVA_OCR_INVOKE_URL=%s\n' "$CLOVA_OCR_INVOKE_URL"
           } > deploy/.env
 
       - name: Setup SSH key

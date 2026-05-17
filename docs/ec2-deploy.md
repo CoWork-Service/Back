@@ -14,6 +14,8 @@ AWS_REGION=ap-northeast-2
 AWS_S3_BUCKET=cowork-backend-uploads-396868033125
 AWS_ACCESS_KEY_ID=<aws access key id>
 AWS_SECRET_ACCESS_KEY=<aws secret access key>
+CLOVA_OCR_SECRET_KEY=<clova ocr secret key>
+CLOVA_OCR_INVOKE_URL=<clova ocr invoke url>
 ```
 
 Recommended `BACKEND_ENV` shape:

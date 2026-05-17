@@ -66,10 +66,10 @@ class ReceiptMatchServiceTest {
     }
 
     @Test
-    @DisplayName("시각 차이가 2분이면 매칭되지 않는다")
+    @DisplayName("시각 차이가 3분이면 매칭되지 않는다")
     void twoMinutesNoMatch() {
         List<BankStatementParser.BankRow> bank = List.of(
-                row("2025-05-16T14:32", 38000, "스타벅스")
+                row("2025-05-16T14:33", 38000, "스타벅스")
         );
 
         Optional<BankStatementParser.BankRow> result =
@@ -107,7 +107,7 @@ class ReceiptMatchServiceTest {
     }
 
     @Test
-    @DisplayName("여러 후보 중 시각이 가장 가까운 첫 번째가 반환된다")
+    @DisplayName("여러 후보 중 시각이 가장 가까운 거래가 반환된다")
     void firstMatchReturned() {
         List<BankStatementParser.BankRow> bank = List.of(
                 row("2025-05-16T14:29", 38000, "편의점A"),
@@ -119,8 +119,38 @@ class ReceiptMatchServiceTest {
                 service.match(LocalDateTime.parse("2025-05-16T14:30"), 38000L, bank);
 
         assertThat(result).isPresent();
-        // 14:29가 리스트 첫 번째라 그게 반환됨 (±1분 모두 해당)
-        assertThat(result.get().vendor()).isEqualTo("편의점A");
+        assertThat(result.get().vendor()).isEqualTo("스타벅스");
+    }
+
+    @Test
+    @DisplayName("시각 차이가 같으면 거래처가 유사한 후보를 우선한다")
+    void vendorSimilarityBreaksTie() {
+        OcrService.OcrResult receipt = new OcrService.OcrResult(
+                LocalDateTime.parse("2025-05-16T14:30"),
+                38000L,
+                "스타벅스 숭실대점",
+                null,
+                null,
+                null,
+                "개인카드",
+                null,
+                null,
+                null,
+                "식대",
+                "스타벅스 숭실대점 영수증",
+                null,
+                List.of()
+        );
+        List<BankStatementParser.BankRow> bank = List.of(
+                row("2025-05-16T14:31", 38000, "편의점"),
+                row("2025-05-16T14:31", 38000, "스타벅스")
+        );
+
+        ReceiptMatchService.MatchResult result = service.match(receipt, bank);
+
+        assertThat(result.matched()).isTrue();
+        assertThat(result.bankRow().vendor()).isEqualTo("스타벅스");
+        assertThat(result.confidence()).isGreaterThan(0);
     }
 
     @Test
