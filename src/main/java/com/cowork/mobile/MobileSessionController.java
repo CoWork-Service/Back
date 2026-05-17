@@ -4,6 +4,8 @@ import com.cowork.budget.Expense;
 import com.cowork.budget.OcrService;
 import com.cowork.budget.ReceiptOcrResponse;
 import com.cowork.common.ApiResponse;
+import com.cowork.event.CoworkEvent;
+import com.cowork.event.CoworkEventRepository;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +37,7 @@ public class MobileSessionController {
     private final MobileSessionService mobileSessionService;
     private final OcrService ocrService;
     private final UserRepository userRepository;
+    private final CoworkEventRepository eventRepository;
 
     @Operation(
             summary = "모바일 세션 생성 (인증 필요)",
@@ -115,7 +118,11 @@ public class MobileSessionController {
     @GetMapping("/{token}")
     public ResponseEntity<ApiResponse<MobileSessionStatusResponse>> getSession(
             @Parameter(description = "세션 토큰", required = true, example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890") @PathVariable String token) {
-        return ResponseEntity.ok(ApiResponse.ok(MobileSessionStatusResponse.of(mobileSessionService.getSession(token))));
+        MobileSession session = mobileSessionService.getSession(token);
+        List<MobileEventOptionResponse> events = eventRepository.findFiltered(session.getCohortId(), null).stream()
+                .map(MobileEventOptionResponse::of)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.ok(MobileSessionStatusResponse.of(session, events)));
     }
 
     @Operation(
@@ -309,12 +316,18 @@ public class MobileSessionController {
         }
     }
 
+    record MobileEventOptionResponse(Long id, String name, LocalDate startDate) {
+        static MobileEventOptionResponse of(CoworkEvent event) {
+            return new MobileEventOptionResponse(event.getId(), event.getName(), event.getStartDate());
+        }
+    }
+
     record MobileSessionStatusResponse(String sessionToken, boolean used, boolean expired, Long expenseId,
-                                       LocalDateTime expiresAt) {
-        static MobileSessionStatusResponse of(MobileSession session) {
+                                       LocalDateTime expiresAt, List<MobileEventOptionResponse> events) {
+        static MobileSessionStatusResponse of(MobileSession session, List<MobileEventOptionResponse> events) {
             return new MobileSessionStatusResponse(
                     session.getSessionToken(), session.isUsed(), session.isExpired(),
-                    session.getExpenseId(), session.getExpiresAt()
+                    session.getExpenseId(), session.getExpiresAt(), events
             );
         }
     }
