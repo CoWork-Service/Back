@@ -149,6 +149,9 @@ public class SsoService {
         params.put("organizationId", String.valueOf(user.getOrganization().getId()));
         params.put("organizationName", user.getOrganization().getName());
         params.put("joinStatus", token.getJoinStatus());
+        params.put("consentRequired", String.valueOf(Boolean.TRUE.equals(token.getConsentRequired())));
+        params.put("termsVersion", defaultString(token.getTermsVersion()));
+        params.put("privacyVersion", defaultString(token.getPrivacyVersion()));
         params.put("hasCouncil", "true");
         return new SsoCallbackResult(redirect("/main", params), token);
     }

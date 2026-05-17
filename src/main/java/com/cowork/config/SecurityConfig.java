@@ -4,7 +4,10 @@ import com.cowork.auth.AuthCookieService;
 import com.cowork.auth.CookieOriginFilter;
 import com.cowork.auth.JwtAuthenticationFilter;
 import com.cowork.auth.JwtUtil;
+import com.cowork.consent.PolicyConsentFilter;
+import com.cowork.consent.PolicyConsentService;
 import com.cowork.user.UserDetailsServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,6 +35,8 @@ public class SecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthCookieService authCookieService;
     private final CookieOriginFilter cookieOriginFilter;
+    private final PolicyConsentService policyConsentService;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -57,7 +62,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .addFilterBefore(cookieOriginFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(jwtAuthenticationFilter(), CookieOriginFilter.class);
+            .addFilterAfter(jwtAuthenticationFilter(), CookieOriginFilter.class)
+            .addFilterAfter(policyConsentFilter(), JwtAuthenticationFilter.class);
 
         return http.build();
     }
@@ -65,6 +71,11 @@ public class SecurityConfig {
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(jwtUtil, userDetailsService, authCookieService);
+    }
+
+    @Bean
+    public PolicyConsentFilter policyConsentFilter() {
+        return new PolicyConsentFilter(policyConsentService, objectMapper);
     }
 
     @Bean

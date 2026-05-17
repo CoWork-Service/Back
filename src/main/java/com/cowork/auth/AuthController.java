@@ -6,6 +6,7 @@ import com.cowork.auth.dto.SsoProfileResponse;
 import com.cowork.auth.dto.SsoRegisterRequest;
 import com.cowork.auth.dto.TokenResponse;
 import com.cowork.common.ApiResponse;
+import com.cowork.consent.PolicyConsentService;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +36,7 @@ public class AuthController {
     private final SsoService ssoService;
     private final UserRepository userRepository;
     private final AuthCookieService authCookieService;
+    private final PolicyConsentService policyConsentService;
 
     @Operation(summary = "숭실대 SSO 콜백", description = "SmartID SSO 인증 성공 후 sToken/sIdno를 받아 프론트로 리다이렉트합니다.")
     @GetMapping("/sso/callback")
@@ -321,8 +323,10 @@ public class AuthController {
     public ResponseEntity<ApiResponse<MeResponse>> me(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = Long.parseLong(userDetails.getUsername());
         User user = userRepository.findById(userId).orElseThrow();
+        PolicyConsentService.ConsentStatus consentStatus = policyConsentService.getStatus(user.getId());
         return ResponseEntity.ok(ApiResponse.ok(new MeResponse(user.getId(), user.getName(), user.getEmail(),
-                user.getOrganization().getId(), user.getOrganization().getName())));
+                user.getOrganization().getId(), user.getOrganization().getName(),
+                consentStatus.consentRequired(), consentStatus.termsVersion(), consentStatus.privacyVersion())));
     }
 
     @lombok.Getter
@@ -346,5 +350,11 @@ public class AuthController {
         private Long organizationId;
         @Schema(description = "소속 조직명", example = "멋쟁이사자처럼")
         private String organizationName;
+        @Schema(description = "필수 약관 및 개인정보 동의 필요 여부", example = "true")
+        private boolean consentRequired;
+        @Schema(description = "현재 서비스 이용약관 버전", example = "2026-05-17")
+        private String termsVersion;
+        @Schema(description = "현재 개인정보 수집·이용 동의 버전", example = "2026-05-17")
+        private String privacyVersion;
     }
 }

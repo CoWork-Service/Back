@@ -6,6 +6,7 @@ import com.cowork.auth.dto.TokenResponse;
 import com.cowork.cohort.*;
 import com.cowork.common.BusinessException;
 import com.cowork.common.ErrorCode;
+import com.cowork.consent.PolicyConsentService;
 import com.cowork.organization.Organization;
 import com.cowork.organization.OrganizationRepository;
 import com.cowork.user.JoinStatus;
@@ -32,6 +33,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final PolicyConsentService policyConsentService;
 
     private static final String INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int INVITE_CODE_LENGTH = 16;
@@ -179,8 +181,17 @@ public class AuthService {
                 .build();
         refreshTokenRepository.save(refreshToken);
 
-        return new TokenResponse(accessToken, refreshTokenStr, user.getId(), user.getName(), user.getEmail(),
-                user.getJoinStatus().name());
+        return new TokenResponse(
+                accessToken,
+                refreshTokenStr,
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getJoinStatus().name(),
+                policyConsentService.isConsentRequired(user.getId()),
+                PolicyConsentService.CURRENT_TERMS_VERSION,
+                PolicyConsentService.CURRENT_PRIVACY_VERSION
+        );
     }
 
     private String generateInviteCode() {

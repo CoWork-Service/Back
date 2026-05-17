@@ -15,8 +15,12 @@ public class TokenResponse {
     private String name;
     private String email;
     private String joinStatus;
+    private Boolean consentRequired;
+    private String termsVersion;
+    private String privacyVersion;
 
     public TokenResponse withoutTokens() {
-        return new TokenResponse(null, null, userId, name, email, joinStatus);
+        return new TokenResponse(null, null, userId, name, email, joinStatus,
+                consentRequired, termsVersion, privacyVersion);
     }
 }

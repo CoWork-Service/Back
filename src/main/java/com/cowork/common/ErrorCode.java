@@ -18,6 +18,7 @@ public enum ErrorCode {
     DUPLICATE_STUDENT_ID(409, "이미 가입된 학번입니다"),
     INVALID_SSO_TOKEN(401, "유효하지 않은 SSO 인증 정보입니다"),
     EXPIRED_SSO_TOKEN(401, "만료된 SSO 인증 정보입니다"),
+    POLICY_CONSENT_REQUIRED(403, "필수 약관 및 개인정보 수집·이용 동의가 필요합니다"),
 
     // General
     NOT_FOUND(404, "리소스를 찾을 수 없습니다"),
