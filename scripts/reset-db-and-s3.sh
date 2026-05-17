@@ -159,7 +159,7 @@ Env file: $ENV_FILE
 EOF
 
   if [[ "$ASSUME_YES" == true ]]; then
-    return
+    return 0
   fi
 
   printf 'Type RESET to continue: '
@@ -171,15 +171,15 @@ EOF
 }
 
 stop_app() {
-  [[ "$STOP_APP" == true ]] || return
-  [[ -f "$COMPOSE_APP_FILE" ]] || return
+  [[ "$STOP_APP" == true ]] || return 0
+  [[ -f "$COMPOSE_APP_FILE" ]] || return 0
 
   echo "Stopping app service..."
   docker compose --env-file "$ENV_FILE" -f "$COMPOSE_DB_FILE" -f "$COMPOSE_APP_FILE" stop app || true
 }
 
 reset_mysql() {
-  [[ "$RESET_DB" == true ]] || return
+  [[ "$RESET_DB" == true ]] || return 0
 
   require_cmd docker
   [[ -f "$COMPOSE_DB_FILE" ]] || die "Compose file not found: $COMPOSE_DB_FILE"
@@ -213,7 +213,7 @@ SQL
 }
 
 reset_s3() {
-  [[ "$RESET_S3" == true ]] || return
+  [[ "$RESET_S3" == true ]] || return 0
 
   [[ -n "$AWS_S3_BUCKET" ]] || die "AWS_S3_BUCKET is required"
   [[ -n "$AWS_ACCESS_KEY_ID" ]] || die "AWS_ACCESS_KEY_ID is required"
