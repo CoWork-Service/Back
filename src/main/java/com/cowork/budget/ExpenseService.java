@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -51,7 +52,8 @@ public class ExpenseService {
     @Transactional
     public Expense createExpense(Long cohortId, LocalDate date, String department, String category,
                                  String vendor, String description, Long amount, String paymentMethod,
-                                 String note, Long eventId, MultipartFile receipt, List<Long> photoIds) {
+                                 String note, Long eventId, LocalDateTime receiptDatetime,
+                                 MultipartFile receipt, List<Long> photoIds) {
         String receiptPath = null;
         if (receipt != null && !receipt.isEmpty()) {
             receiptPath = storageService.store(receipt, "expenses", cohortId);
@@ -67,6 +69,7 @@ public class ExpenseService {
                 .amount(amount)
                 .paymentMethod(paymentMethod)
                 .receiptStoragePath(receiptPath)
+                .receiptDatetime(receiptDatetime)
                 .note(note)
                 .eventId(eventId)
                 .build();
@@ -100,7 +103,8 @@ public class ExpenseService {
     @Transactional
     public Expense updateExpense(Long id, LocalDate date, String department, String category,
                                  String vendor, String description, Long amount, String paymentMethod,
-                                 String note, Long eventId, MultipartFile receipt, List<Long> photoIds) {
+                                 String note, Long eventId, LocalDateTime receiptDatetime,
+                                 MultipartFile receipt, List<Long> photoIds) {
         Expense expense = findById(id);
 
         if (receipt != null && !receipt.isEmpty()) {
@@ -120,7 +124,8 @@ public class ExpenseService {
                 amount != null ? amount : expense.getAmount(),
                 paymentMethod != null ? paymentMethod : expense.getPaymentMethod(),
                 note != null ? note : expense.getNote(),
-                eventId != null ? eventId : expense.getEventId()
+                eventId != null ? eventId : expense.getEventId(),
+                receiptDatetime
         );
         if (photoIds != null) {
             replacePhotoLinks(expense.getId(), photoIds);
