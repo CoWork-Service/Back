@@ -88,7 +88,7 @@ jobs:
             printf 'FRONTEND_URL=%s\n' "https://cowork.kro.kr"
             printf 'CORS_ALLOWED_ORIGIN_PATTERNS=%s\n' "http://localhost:5173,https://d3enhw6vmzgeun.cloudfront.net,https://cowork.kro.kr,https://3-35-27-121.nip.io"
             printf 'AUTH_COOKIE_SECURE=%s\n' "true"
-            printf 'AUTH_COOKIE_SAME_SITE=%s\n' "None"
+            printf 'AUTH_COOKIE_SAME_SITE=%s\n' "Lax"
             printf 'FILE_STORAGE_TYPE=%s\n' "$FILE_STORAGE_TYPE"
             printf 'AWS_REGION=%s\n' "$AWS_REGION"
             printf 'AWS_S3_BUCKET=%s\n' "$AWS_S3_BUCKET"
