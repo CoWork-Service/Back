@@ -1,7 +1,6 @@
 package com.cowork.mobile;
 
 import com.cowork.budget.Expense;
-import com.cowork.cohort.Department;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
@@ -268,7 +267,7 @@ public class MobileSessionController {
     @Getter
     static class MobileExpenseRequest {
         private LocalDate date;
-        private Department department;
+        private String department;
         private String category;
         private String vendor;
         private String description;

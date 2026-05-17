@@ -1,6 +1,5 @@
 package com.cowork.budget;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -45,10 +44,9 @@ public class Expense extends BaseEntity {
     @Column(nullable = false)
     private LocalDate date;
 
-    /** 지출 부서 (예: PLANNING, MANAGEMENT 등) */
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Department department;
+    /** 지출 부서 (조직별 커스텀 부서명) */
+    @Column(nullable = false, length = 100)
+    private String department;
 
     /** 지출 분류 (예: "식비", "인쇄비", "교통비") */
     @Column(nullable = false, length = 100)
@@ -88,7 +86,7 @@ public class Expense extends BaseEntity {
      * 동작: 날짜·부서·분류·거래처·설명·금액·결제수단·메모·행사ID 를 한꺼번에 업데이트.
      * 사용 시점: ExpenseService.updateExpense() 에서 호출 (PUT /api/expenses/{id}).
      */
-    public void update(LocalDate date, Department department, String category, String vendor,
+    public void update(LocalDate date, String department, String category, String vendor,
                        String description, Long amount, String paymentMethod, String note, Long eventId) {
         this.date = date;
         this.department = department;

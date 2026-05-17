@@ -13,6 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrganizationDepartmentService {
 
+    private static final String REQUIRED_DEPARTMENT = "회장단";
     private static final List<String> DEFAULT_DEPARTMENTS = List.of("회장단", "기획국", "총무부", "홍보국", "복지국");
 
     private final OrganizationRepository organizationRepository;
@@ -20,6 +21,13 @@ public class OrganizationDepartmentService {
 
     public List<OrganizationDepartment> getDepartments(Long organizationId) {
         return organizationDepartmentRepository.findByOrganizationIdOrderBySortOrderAscNameAsc(organizationId);
+    }
+
+    public List<String> getDepartmentNames(Long organizationId) {
+        List<String> names = getDepartments(organizationId).stream()
+                .map(OrganizationDepartment::getName)
+                .toList();
+        return normalize(names);
     }
 
     @Transactional
@@ -47,6 +55,7 @@ public class OrganizationDepartmentService {
                 : departmentNames;
 
         LinkedHashSet<String> deduplicated = new LinkedHashSet<>();
+        deduplicated.add(REQUIRED_DEPARTMENT);
         for (String name : source) {
             if (name == null) continue;
             String trimmed = name.trim();

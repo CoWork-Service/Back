@@ -1,6 +1,5 @@
 package com.cowork.budget;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.BusinessException;
 import com.cowork.common.ErrorCode;
 import com.cowork.common.storage.FileStorageService;
@@ -22,7 +21,7 @@ public class ExpenseService {
     private final ExpensePhotoLinkRepository expensePhotoLinkRepository;
     private final FileStorageService storageService;
 
-    public List<Expense> getExpenses(Long cohortId, Department department, String category,
+    public List<Expense> getExpenses(Long cohortId, String department, String category,
                                      LocalDate dateFrom, LocalDate dateTo) {
         return expenseRepository.findFiltered(cohortId, department, category, dateFrom, dateTo);
     }
@@ -33,7 +32,7 @@ public class ExpenseService {
 
         Map<String, Long> byDept = all.stream()
                 .collect(Collectors.groupingBy(
-                        e -> e.getDepartment().name(),
+                        Expense::getDepartment,
                         Collectors.summingLong(Expense::getAmount)));
 
         Map<String, Long> byCategory = all.stream()
@@ -50,7 +49,7 @@ public class ExpenseService {
     }
 
     @Transactional
-    public Expense createExpense(Long cohortId, LocalDate date, Department department, String category,
+    public Expense createExpense(Long cohortId, LocalDate date, String department, String category,
                                  String vendor, String description, Long amount, String paymentMethod,
                                  String note, Long eventId, MultipartFile receipt, List<Long> photoIds) {
         String receiptPath = null;
@@ -77,7 +76,7 @@ public class ExpenseService {
     }
 
     @Transactional
-    public Expense createExpenseWithReceiptPath(Long cohortId, LocalDate date, Department department, String category,
+    public Expense createExpenseWithReceiptPath(Long cohortId, LocalDate date, String department, String category,
                                                 String vendor, String description, Long amount, String paymentMethod,
                                                 String note, Long eventId, String receiptPath, List<Long> photoIds) {
         Expense expense = Expense.builder()
@@ -99,7 +98,7 @@ public class ExpenseService {
     }
 
     @Transactional
-    public Expense updateExpense(Long id, LocalDate date, Department department, String category,
+    public Expense updateExpense(Long id, LocalDate date, String department, String category,
                                  String vendor, String description, Long amount, String paymentMethod,
                                  String note, Long eventId, MultipartFile receipt, List<Long> photoIds) {
         Expense expense = findById(id);

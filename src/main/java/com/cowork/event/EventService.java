@@ -28,8 +28,8 @@ public class EventService {
     private final TimetableRepository timetableRepository;
     private final FileStorageService storageService;
 
-    public List<CoworkEvent> getEvents(Long cohortId, EventStatus status, String category) {
-        return eventRepository.findFiltered(cohortId, status, category);
+    public List<CoworkEvent> getEvents(Long cohortId, EventStatus status) {
+        return eventRepository.findFiltered(cohortId, status);
     }
 
     public EventDetail getEventDetail(Long eventId) {
@@ -44,14 +44,13 @@ public class EventService {
     }
 
     @Transactional
-    public EventDetail createEvent(Long cohortId, String name, String category, EventStatus status,
+    public EventDetail createEvent(Long cohortId, String name, EventStatus status,
                                    String description, LocalDate startDate, LocalDate endDate, String location,
-                                   com.cowork.cohort.Department leadDepartment, List<String> organizers,
+                                   String leadDepartment, List<String> organizers,
                                    Long budget, String coverColor, Long createdBy) {
         CoworkEvent event = CoworkEvent.builder()
                 .cohortId(cohortId)
                 .name(name)
-                .category(category)
                 .status(status != null ? status : EventStatus.PLANNING)
                 .description(description)
                 .startDate(startDate)
@@ -68,12 +67,12 @@ public class EventService {
     }
 
     @Transactional
-    public EventDetail updateEvent(Long eventId, String name, String category, EventStatus status,
+    public EventDetail updateEvent(Long eventId, String name, EventStatus status,
                                    String description, LocalDate startDate, LocalDate endDate, String location,
-                                   com.cowork.cohort.Department leadDepartment, List<String> organizers,
+                                   String leadDepartment, List<String> organizers,
                                    Long budget, String coverColor) {
         CoworkEvent event = findEvent(eventId);
-        event.update(name, category, status, description, startDate, endDate, location, leadDepartment, organizers, budget, coverColor);
+        event.update(name, status, description, startDate, endDate, location, leadDepartment, organizers, budget, coverColor);
         return getEventDetail(eventId);
     }
 

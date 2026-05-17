@@ -1,6 +1,5 @@
 package com.cowork.workspace;
 
-import com.cowork.cohort.Department;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -45,9 +44,8 @@ public class Workspace {
      * 담당 부서 (null 이면 전체 공용)
      * - 부서별 접근 권한 필터링에 사용 가능.
      */
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private Department department;
+    @Column(length = 100)
+    private String department;
 
     /** 워크스페이스 이름 (예: "기획부 회의록") */
     @Column(nullable = false, length = 100)

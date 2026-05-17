@@ -1,6 +1,5 @@
 package com.cowork.file;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.ApiResponse;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
@@ -95,7 +94,7 @@ public class FileController {
     public ResponseEntity<ApiResponse<List<FileItemResponse>>> getFiles(
             @Parameter(description = "코호트 ID (필수)", required = true, example = "5") @RequestParam Long cohortId,
             @Parameter(description = "부모 폴더 ID (null이면 루트 조회)", example = "1") @RequestParam(required = false) Long parentId,
-            @Parameter(description = "부서 필터 (PLANNING / MARKETING / OPERATION / FINANCE / GENERAL)") @RequestParam(required = false) Department department) {
+            @Parameter(description = "부서 필터") @RequestParam(required = false) String department) {
         List<FileItemResponse> list = fileService.getFiles(cohortId, parentId, department)
                 .stream().map(FileItemResponse::of).collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(list));
@@ -198,7 +197,7 @@ public class FileController {
             @Parameter(description = "업로드할 파일", required = true) @RequestParam("file") MultipartFile file,
             @Parameter(description = "코호트 ID", required = true, example = "5") @RequestParam Long cohortId,
             @Parameter(description = "업로드 위치 폴더 ID (null이면 루트)", example = "10") @RequestParam(required = false) Long parentId,
-            @Parameter(description = "담당 부서") @RequestParam(required = false) Department department,
+            @Parameter(description = "담당 부서") @RequestParam(required = false) String department,
             @Parameter(description = "연결할 행사 ID") @RequestParam(required = false) Long eventId,
             @AuthenticationPrincipal UserDetails userDetails) {
         User user = userRepository.findById(Long.parseLong(userDetails.getUsername())).orElseThrow();
@@ -425,20 +424,20 @@ public class FileController {
         private Long cohortId;
         private String name;
         private Long parentId;
-        private Department department;
+        private String department;
         private Long eventId;
     }
 
     @Getter
     static class FileUpdateRequest {
         private String name;
-        private Department department;
+        private String department;
         private boolean departmentPresent;
         private Long eventId;
         private boolean eventIdPresent;
 
         @JsonSetter("department")
-        public void setDepartment(Department department) {
+        public void setDepartment(String department) {
             this.department = department;
             this.departmentPresent = true;
         }
@@ -457,7 +456,7 @@ public class FileController {
         static FileItemResponse of(FileItem f) {
             return new FileItemResponse(f.getId(), f.getCohortId(), f.getName(), f.getType().name(),
                     f.getMimeType(), f.getSize(), f.getParentId(),
-                    f.getDepartment() != null ? f.getDepartment().name() : null,
+                    f.getDepartment(),
                     f.getUploadedBy(), f.getEventId(),
                     f.getType() == FileType.FILE ? "/api/files/" + f.getId() + "/download" : null,
                     f.getStoragePath() != null && f.getMimeType() != null && f.getMimeType().startsWith("image/")

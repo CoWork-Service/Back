@@ -21,7 +21,6 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -67,7 +66,6 @@ public class S3FileStorageService implements FileStorageService {
                     .key(objectKey)
                     .contentType(file.getContentType())
                     .contentLength(file.getSize())
-                    .metadata(Map.of("original-name", originalFilename))
                     .build();
             s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
             storedFileRepository.save(StoredFile.builder()

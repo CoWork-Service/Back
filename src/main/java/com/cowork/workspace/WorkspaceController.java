@@ -411,7 +411,7 @@ public class WorkspaceController {
             Workspace workspace = summary.workspace();
             return new WorkspaceResponse(
                     workspace.getId(), workspace.getCohortId(),
-                    workspace.getDepartment() != null ? workspace.getDepartment().name() : "전체",
+                    workspace.getDepartment() != null ? workspace.getDepartment() : "전체",
                     workspace.getName(), workspace.getDescription(),
                     summary.fileCount(), summary.meetingCount(), workspace.getUpdatedAt()
             );
@@ -424,7 +424,7 @@ public class WorkspaceController {
             return new WorkspaceDetailResponse(
                     new WorkspaceResponse(
                             workspace.getId(), workspace.getCohortId(),
-                            workspace.getDepartment() != null ? workspace.getDepartment().name() : "전체",
+                            workspace.getDepartment() != null ? workspace.getDepartment() : "전체",
                             workspace.getName(), workspace.getDescription(),
                             detail.fileCount(), detail.meetings().size(), workspace.getUpdatedAt()
                     ),

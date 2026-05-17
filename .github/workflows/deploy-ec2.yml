@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: backend-ec2
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   DEPLOY_PATH: /opt/cowork/backend
@@ -74,9 +74,11 @@ jobs:
         shell: bash
         run: |
           rm -rf deploy
-          mkdir -p deploy/build/libs
+          mkdir -p deploy/build/libs deploy/scripts
           cp Dockerfile docker-compose.yml docker-compose.app.yml Caddyfile deploy/
           cp build/libs/*.jar deploy/build/libs/app.jar
+          cp scripts/reset-db-and-s3.sh deploy/scripts/
+          chmod +x deploy/scripts/reset-db-and-s3.sh
           {
             printf '%s\n' "$BACKEND_ENV"
             printf 'FRONTEND_URL=%s\n' "https://cowork.kro.kr"
@@ -175,15 +177,28 @@ jobs:
               "$EC2_USER@$EC2_HOST" << EOF
             set -euo pipefail
             cd "$DEPLOY_PATH"
-            sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d mysql
-            sudo docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --force-recreate --no-deps app caddy
+            sudo docker compose --env-file .env -f docker-compose.yml -f docker-compose.app.yml up -d mysql
+            sudo docker compose --env-file .env -f docker-compose.yml -f docker-compose.app.yml up -d --force-recreate --no-deps app caddy
             sudo docker image prune -f
-            sudo docker compose -f docker-compose.yml -f docker-compose.app.yml ps
+            sudo docker compose --env-file .env -f docker-compose.yml -f docker-compose.app.yml ps
           EOF
             then
               exit 0
             fi
             echo "backend restart attempt ${attempt} failed; retrying..."
             sleep 20
+          done
+          exit 1
+
+      - name: Verify backend
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        shell: bash
+        run: |
+          for attempt in {1..30}; do
+            if curl -kfsS --max-time 10 "https://$EC2_HOST/v3/api-docs" >/dev/null; then
+              exit 0
+            fi
+            echo "backend verification attempt ${attempt} failed; retrying..."
+            sleep 10
           done
           exit 1

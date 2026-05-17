@@ -2,7 +2,6 @@ package com.cowork.mobile;
 
 import com.cowork.budget.Expense;
 import com.cowork.budget.ExpenseService;
-import com.cowork.cohort.Department;
 import com.cowork.common.BusinessException;
 import com.cowork.common.ErrorCode;
 import com.cowork.common.storage.FileStorageService;
@@ -59,7 +58,7 @@ public class MobileSessionService {
     }
 
     @Transactional
-    public Expense createExpense(String token, LocalDate date, Department department, String category,
+    public Expense createExpense(String token, LocalDate date, String department, String category,
                                  String vendor, String description, Long amount, String paymentMethod,
                                  String note, Long eventId, List<Long> photoIds) {
         MobileSession session = getSession(token);

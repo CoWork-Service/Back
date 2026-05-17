@@ -53,6 +53,15 @@ public class RentalRecord {
     @Column(length = 50)
     private String contact;
 
+    /** 대여 처리 담당자 */
+    @Column(name = "manager_name", length = 50)
+    private String managerName;
+
+    /** 신분증 제출 여부 */
+    @Column(name = "id_card_submitted", nullable = false)
+    @Builder.Default
+    private Boolean idCardSubmitted = false;
+
     /** 대여 시작 일시 */
     @Column(name = "rented_at", nullable = false)
     private LocalDateTime rentedAt;
@@ -93,6 +102,35 @@ public class RentalRecord {
      */
     public void returnAsset() {
         this.returnedAt = LocalDateTime.now();
+    }
+
+    public void updateRental(String borrowerName, String studentId, String managerName,
+                             Boolean idCardSubmitted, LocalDateTime rentedAt, LocalDateTime dueAt,
+                             Integer quantity, String note) {
+        if (borrowerName != null) {
+            this.borrowerName = borrowerName;
+        }
+        if (studentId != null) {
+            this.studentId = studentId;
+        }
+        if (managerName != null) {
+            this.managerName = managerName;
+        }
+        if (idCardSubmitted != null) {
+            this.idCardSubmitted = idCardSubmitted;
+        }
+        if (rentedAt != null) {
+            this.rentedAt = rentedAt;
+        }
+        if (dueAt != null) {
+            this.dueAt = dueAt;
+        }
+        if (quantity != null) {
+            this.quantity = quantity;
+        }
+        if (note != null) {
+            this.note = note;
+        }
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.cowork.event;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -82,10 +81,9 @@ public class CoworkEvent extends BaseEntity {
     @Column(length = 200)
     private String location;
 
-    /** 주관 부서 (예: PLANNING, MANAGEMENT 등, 선택) */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "lead_department", length = 20)
-    private Department leadDepartment;
+    /** 주관 부서 (조직별 커스텀 부서명, 선택) */
+    @Column(name = "lead_department", length = 100)
+    private String leadDepartment;
 
     /**
      * 담당자(주최자) 목록 (JSON 배열)
@@ -113,11 +111,10 @@ public class CoworkEvent extends BaseEntity {
      * 동작: 모든 필드를 새 값으로 교체.
      * 사용 시점: EventService.updateEvent() 에서 호출 (PUT /api/events/{id}).
      */
-    public void update(String name, String category, EventStatus status, String description,
-                       LocalDate startDate, LocalDate endDate, String location, Department leadDepartment,
+    public void update(String name, EventStatus status, String description,
+                       LocalDate startDate, LocalDate endDate, String location, String leadDepartment,
                        List<String> organizers, Long budget, String coverColor) {
         this.name = name;
-        this.category = category;
         this.status = status;
         this.description = description;
         this.startDate = startDate;

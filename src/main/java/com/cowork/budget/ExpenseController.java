@@ -1,6 +1,5 @@
 package com.cowork.budget;
 
-import com.cowork.cohort.Department;
 import com.cowork.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -143,7 +142,7 @@ public class ExpenseController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExpenseResponse>>> getExpenses(
             @Parameter(description = "코호트 ID (필수)", required = true, example = "5") @RequestParam Long cohortId,
-            @Parameter(description = "부서 필터 (PLANNING / MARKETING / OPERATION / FINANCE / GENERAL)") @RequestParam(required = false) Department department,
+            @Parameter(description = "부서 필터") @RequestParam(required = false) String department,
             @Parameter(description = "분류 필터 (예: 식비, 인쇄비)", example = "식비") @RequestParam(required = false) String category,
             @Parameter(description = "조회 시작 날짜 (yyyy-MM-dd)", example = "2025-05-01") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @Parameter(description = "조회 종료 날짜 (yyyy-MM-dd)", example = "2025-05-31") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
@@ -251,7 +250,7 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse<ExpenseResponse>> createExpense(
             @Parameter(description = "지출 날짜 (yyyy-MM-dd)", required = true, example = "2025-05-10") @RequestParam LocalDate date,
             @Parameter(description = "코호트 ID", required = true, example = "5") @RequestParam Long cohortId,
-            @Parameter(description = "지출 부서 (PLANNING / MARKETING / OPERATION / FINANCE / GENERAL)", required = true) @RequestParam Department department,
+            @Parameter(description = "지출 부서", required = true) @RequestParam String department,
             @Parameter(description = "지출 분류 (예: 식비, 인쇄비)", required = true, example = "인쇄비") @RequestParam String category,
             @Parameter(description = "거래처/공급업체", required = true, example = "킨코스") @RequestParam String vendor,
             @Parameter(description = "상세 설명", example = "포스터 100장 인쇄") @RequestParam(required = false) String description,
@@ -328,7 +327,7 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse<ExpenseResponse>> updateExpense(
             @Parameter(description = "지출 ID", required = true, example = "1") @PathVariable Long id,
             @Parameter(description = "지출 날짜 (yyyy-MM-dd)", example = "2025-05-10") @RequestParam(required = false) LocalDate date,
-            @Parameter(description = "지출 부서") @RequestParam(required = false) Department department,
+            @Parameter(description = "지출 부서") @RequestParam(required = false) String department,
             @Parameter(description = "지출 분류") @RequestParam(required = false) String category,
             @Parameter(description = "거래처") @RequestParam(required = false) String vendor,
             @Parameter(description = "상세 설명") @RequestParam(required = false) String description,
@@ -371,7 +370,7 @@ public class ExpenseController {
                            LocalDateTime createdAt, LocalDateTime updatedAt) {
         static ExpenseResponse of(Expense e, List<Long> photoIds) {
             return new ExpenseResponse(e.getId(), e.getCohortId(), e.getDate(),
-                    e.getDepartment().name(), e.getCategory(), e.getVendor(), e.getDescription(),
+                    e.getDepartment(), e.getCategory(), e.getVendor(), e.getDescription(),
                     e.getAmount(), e.getPaymentMethod(), e.getReceiptStoragePath(),
                     e.getReceiptStoragePath() != null ? "/uploads/" + e.getReceiptStoragePath() : null,
                     photoIds, e.getNote(),

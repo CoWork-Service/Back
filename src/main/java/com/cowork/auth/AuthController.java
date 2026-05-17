@@ -109,7 +109,7 @@ public class AuthController {
                               "email": "hong@example.com",
                               "password": "password123!",
                               "name": "홍길동",
-                              "inviteCode": "COWORK2025"
+                              "inviteCode": "XK9M2P7Q4R8T1AZ6"
                             }
                             """)))
             @Valid @RequestBody RegisterRequest req) {

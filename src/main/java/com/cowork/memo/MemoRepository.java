@@ -1,6 +1,5 @@
 package com.cowork.memo;
 
-import com.cowork.cohort.Department;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -13,5 +12,5 @@ public interface MemoRepository extends JpaRepository<Memo, Long> {
            "AND (:priority IS NULL OR m.priority = :priority) " +
            "AND (:department IS NULL OR m.department = :department) " +
            "ORDER BY m.createdAt DESC")
-    List<Memo> findFiltered(Long cohortId, MemoStatus status, MemoPriority priority, Department department);
+    List<Memo> findFiltered(Long cohortId, MemoStatus status, MemoPriority priority, String department);
 }

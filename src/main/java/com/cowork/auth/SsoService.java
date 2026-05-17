@@ -7,7 +7,6 @@ import com.cowork.cohort.Cohort;
 import com.cowork.cohort.CohortMember;
 import com.cowork.cohort.CohortMemberRepository;
 import com.cowork.cohort.CohortRepository;
-import com.cowork.cohort.Department;
 import com.cowork.cohort.MemberRole;
 import com.cowork.common.BusinessException;
 import com.cowork.common.ErrorCode;
@@ -26,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -34,6 +34,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +52,11 @@ public class SsoService {
     private static final String SAINT_SSO_URL = "https://saint.ssu.ac.kr/webSSO/sso.jsp";
     private static final String SAINT_MAIN_URL = "https://saint.ssu.ac.kr/webSSUMain/main_student.jsp";
     private static final String INVITE_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int INVITE_CODE_LENGTH = 16;
+    private static final String SOONGSIL_MAIL_DOMAIN = "soongsil.ac.kr";
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
+    private static final Pattern ENCODED_TOKEN_PATTERN = Pattern.compile("[A-Za-z0-9_+/\\-]{8,}={0,2}");
+    private static final int MAX_COOKIE_DECODE_DEPTH = 3;
 
     private final AuthService authService;
     private final UserRepository userRepository;
@@ -102,7 +109,7 @@ public class SsoService {
     @Transactional
     public SsoProfileResponse getSsoProfile(String tempToken) {
         SsoTempToken token = findValidTempToken(tempToken);
-        return new SsoProfileResponse(token.getStudentId(), token.getName(), token.getDepartment(), token.getEmail());
+        return new SsoProfileResponse(token.getStudentId(), token.getName(), token.getDepartment());
     }
 
     @Transactional
@@ -112,7 +119,7 @@ public class SsoService {
             throw new BusinessException(ErrorCode.DUPLICATE_STUDENT_ID);
         }
 
-        String email = resolveEmail(req.getEmail(), tempToken.getEmail(), tempToken.getStudentId());
+        String email = resolveEmail(tempToken.getEmail(), tempToken.getStudentId());
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
@@ -138,7 +145,6 @@ public class SsoService {
         params.put("refreshToken", token.getRefreshToken());
         params.put("userId", String.valueOf(token.getUserId()));
         params.put("name", token.getName());
-        params.put("email", token.getEmail());
         params.put("studentId", defaultString(user.getStudentId()));
         params.put("department", firstText(user.getOrganization().getDepartment(), profile.department()));
         params.put("organizationId", String.valueOf(user.getOrganization().getId()));
@@ -178,7 +184,7 @@ public class SsoService {
                 .cohort(cohort)
                 .user(user)
                 .role(MemberRole.ADMIN)
-                .department(Department.회장단)
+                .department("회장단")
                 .build());
 
         organizationDepartmentService.replaceDepartments(organization.getId(), req.getDepartments());
@@ -193,22 +199,26 @@ public class SsoService {
                 .email(email)
                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                 .name(firstText(tempToken.getName(), tempToken.getStudentId()))
-                .joinStatus(JoinStatus.PENDING)
+                .joinStatus(JoinStatus.ACTIVE)
                 .build();
         userRepository.save(user);
-        return new TokenResponse(null, null, user.getId(), user.getName(), user.getEmail(), JoinStatus.PENDING.name());
+
+        Cohort cohort = cohortRepository.findByOrganizationIdOrderByYearDesc(organization.getId()).stream()
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.COHORT_NOT_FOUND));
+        cohortMemberRepository.save(CohortMember.builder()
+                .cohort(cohort)
+                .user(user)
+                .role(MemberRole.EDITOR)
+                .build());
+
+        return authService.issueTokens(user);
     }
 
     private Organization findOrganizationForJoin(SsoRegisterRequest req, SsoTempToken tempToken) {
         if (hasText(req.getInviteCode())) {
             return organizationRepository.findByInviteCode(req.getInviteCode().trim().toUpperCase())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITE_CODE));
-        }
-
-        String department = firstText(req.getDepartment(), tempToken.getDepartment());
-        if (hasText(department)) {
-            return organizationRepository.findFirstByDepartmentOrderByIdAsc(department)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.ORGANIZATION_NOT_FOUND));
         }
 
         throw new BusinessException(ErrorCode.INVALID_INVITE_CODE);
@@ -264,6 +274,7 @@ public class SsoService {
         }
 
         String cookies = extractCookies(ssoResponse);
+        String cookieEmail = extractEmailFromCookies(ssoResponse.headers().allValues("set-cookie"));
         if (!hasText(cookies)) {
             throw new BusinessException(ErrorCode.INVALID_SSO_TOKEN);
         }
@@ -280,10 +291,10 @@ public class SsoService {
             throw new BusinessException(ErrorCode.INVALID_SSO_TOKEN);
         }
 
-        return parseSaintProfile(profileResponse.body(), sIdno);
+        return parseSaintProfile(profileResponse.body(), sIdno, cookieEmail);
     }
 
-    private SaintProfile parseSaintProfile(String html, String fallbackStudentId) {
+    private SaintProfile parseSaintProfile(String html, String fallbackStudentId, String fallbackEmail) {
         String text = html
                 .replaceAll("(?is)<script.*?</script>", " ")
                 .replaceAll("(?is)<style.*?</style>", " ")
@@ -298,7 +309,7 @@ public class SsoService {
                 match(text, "(?:성명|이름)\\s*[:：]?\\s*([가-힣A-Za-z]{2,30})")
         );
         String department = match(text, "(?:소속|학과|학부|전공)\\s*[:：]?\\s*([^\\s]{2,100})");
-        String email = match(text, "([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})");
+        String email = firstText(fallbackEmail, matchSoongsilEmail(text));
 
         return new SaintProfile(studentId, defaultString(name), department, email);
     }
@@ -309,14 +320,36 @@ public class SsoService {
                 .reduce("", (left, right) -> left.isEmpty() ? right : left + "; " + right);
     }
 
-    private String resolveEmail(String requestEmail, String ssoEmail, String studentId) {
-        return firstText(requestEmail, ssoEmail, studentId + "@sso.cowork.local").toLowerCase();
+    static String extractEmailFromCookies(List<String> setCookies) {
+        List<String> candidates = new ArrayList<>();
+        for (String setCookie : setCookies) {
+            collectEmailCandidates(setCookie, candidates, 0);
+        }
+        return candidates.stream()
+                .filter(SsoService::isSoongsilEmail)
+                .findFirst()
+                .orElse(null);
+    }
+
+    String resolveEmail(String ssoEmail, String studentId) {
+        if (isSoongsilEmail(ssoEmail)) {
+            return ssoEmail.trim().toLowerCase();
+        }
+        return (studentId + "@" + SOONGSIL_MAIL_DOMAIN).toLowerCase();
+    }
+
+    private static boolean isSoongsilEmail(String email) {
+        if (!hasTextStatic(email)) {
+            return false;
+        }
+        String normalized = email.trim().toLowerCase();
+        return EMAIL_PATTERN.matcher(normalized).matches() && normalized.endsWith("@" + SOONGSIL_MAIL_DOMAIN);
     }
 
     private String generateInviteCode() {
         SecureRandom random = new SecureRandom();
-        StringBuilder builder = new StringBuilder(8);
-        for (int i = 0; i < 8; i++) {
+        StringBuilder builder = new StringBuilder(INVITE_CODE_LENGTH);
+        for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
             builder.append(INVITE_CODE_CHARS.charAt(random.nextInt(INVITE_CODE_CHARS.length())));
         }
         String code = builder.toString();
@@ -346,6 +379,126 @@ public class SsoService {
         return matcher.find() ? matcher.group(1).trim() : null;
     }
 
+    private static String matchEmail(String text) {
+        if (!hasTextStatic(text)) {
+            return null;
+        }
+        Matcher matcher = EMAIL_PATTERN.matcher(text);
+        return matcher.find() ? matcher.group().trim() : null;
+    }
+
+    private static void collectEmailCandidates(String text, List<String> candidates, int depth) {
+        if (!hasTextStatic(text) || depth > MAX_COOKIE_DECODE_DEPTH) {
+            return;
+        }
+
+        String decoded = decodeCookieText(text);
+        Matcher emailMatcher = EMAIL_PATTERN.matcher(decoded);
+        while (emailMatcher.find()) {
+            candidates.add(emailMatcher.group().trim().toLowerCase());
+        }
+
+        if (depth == MAX_COOKIE_DECODE_DEPTH) {
+            return;
+        }
+
+        Matcher tokenMatcher = ENCODED_TOKEN_PATTERN.matcher(decoded);
+        while (tokenMatcher.find()) {
+            String token = tokenMatcher.group();
+            for (String decodedToken : decodeBase64Candidates(token)) {
+                if (!decodedToken.equals(decoded)) {
+                    collectEmailCandidates(decodedToken, candidates, depth + 1);
+                }
+            }
+        }
+    }
+
+    private static List<String> decodeBase64Candidates(String value) {
+        List<String> decodedValues = new ArrayList<>();
+        String normalized = value.trim();
+        if (normalized.length() < 8 || normalized.length() > 4096) {
+            return decodedValues;
+        }
+
+        decodeBase64(normalized, false).ifPresent(decodedValues::add);
+        decodeBase64(normalized, true).ifPresent(decoded -> {
+            if (!decodedValues.contains(decoded)) {
+                decodedValues.add(decoded);
+            }
+        });
+        return decodedValues;
+    }
+
+    private static Optional<String> decodeBase64(String value, boolean urlSafe) {
+        try {
+            String padded = padBase64(value);
+            byte[] bytes = urlSafe
+                    ? Base64.getUrlDecoder().decode(padded)
+                    : Base64.getDecoder().decode(padded);
+            if (!isMostlyText(bytes)) {
+                return Optional.empty();
+            }
+            return Optional.of(new String(bytes, StandardCharsets.UTF_8));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static String padBase64(String value) {
+        int remainder = value.length() % 4;
+        if (remainder == 0) {
+            return value;
+        }
+        return value + "=".repeat(4 - remainder);
+    }
+
+    private static boolean isMostlyText(byte[] bytes) {
+        if (bytes.length == 0 || bytes.length > 4096) {
+            return false;
+        }
+        int control = 0;
+        for (byte b : bytes) {
+            int value = b & 0xff;
+            if (value < 0x09 || (value > 0x0d && value < 0x20)) {
+                control++;
+            }
+        }
+        return control <= Math.max(1, bytes.length / 20);
+    }
+
+    private static String matchSoongsilEmail(String text) {
+        if (!hasTextStatic(text)) {
+            return null;
+        }
+        Matcher matcher = EMAIL_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String email = matcher.group().trim();
+            if (isSoongsilEmail(email)) {
+                return email;
+            }
+        }
+        return null;
+    }
+
+    private static String decodeCookieText(String value) {
+        if (value == null) {
+            return "";
+        }
+        String decoded = value;
+        for (int i = 0; i < 3; i++) {
+            try {
+                String next = URLDecoder.decode(decoded.replace("+", "%2B"), StandardCharsets.UTF_8);
+                if (next.equals(decoded)) {
+                    break;
+                }
+                decoded = next;
+            } catch (IllegalArgumentException e) {
+                break;
+            }
+        }
+        return decoded;
+    }
+
     private String firstText(String... values) {
         for (String value : values) {
             if (hasText(value)) return value.trim();
@@ -358,6 +511,10 @@ public class SsoService {
     }
 
     private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private static boolean hasTextStatic(String value) {
         return value != null && !value.trim().isEmpty();
     }
 

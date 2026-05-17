@@ -1,9 +1,11 @@
 package com.cowork.workspace;
 
-import com.cowork.cohort.Department;
+import com.cowork.cohort.Cohort;
+import com.cowork.cohort.CohortRepository;
 import com.cowork.common.BusinessException;
 import com.cowork.common.ErrorCode;
 import com.cowork.file.FileItemRepository;
+import com.cowork.organization.OrganizationDepartmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,8 @@ public class WorkspaceService {
     private final MeetingRepository meetingRepository;
     private final MeetingAttachmentRepository meetingAttachmentRepository;
     private final FileItemRepository fileItemRepository;
+    private final CohortRepository cohortRepository;
+    private final OrganizationDepartmentService organizationDepartmentService;
 
     @Transactional
     public List<WorkspaceSummary> getWorkspaces(Long cohortId) {
@@ -175,17 +179,23 @@ public class WorkspaceService {
                     .build());
         }
 
-        for (Department department : Department.values()) {
+        for (String department : resolveOrganizationDepartments(cohortId)) {
             boolean exists = existing.stream().anyMatch(workspace -> department.equals(workspace.getDepartment()));
             if (!exists) {
                 workspaceRepository.save(Workspace.builder()
                         .cohortId(cohortId)
                         .department(department)
-                        .name(department.name())
-                        .description(department.name() + " 자료와 회의록을 관리하는 공간입니다.")
+                        .name(department)
+                        .description(department + " 자료와 회의록을 관리하는 공간입니다.")
                         .build());
             }
         }
+    }
+
+    private List<String> resolveOrganizationDepartments(Long cohortId) {
+        Cohort cohort = cohortRepository.findById(cohortId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COHORT_NOT_FOUND));
+        return organizationDepartmentService.getDepartmentNames(cohort.getOrganization().getId());
     }
 
     public record AttachmentPayload(Long fileItemId, String storagePath, String name, Long size) {
