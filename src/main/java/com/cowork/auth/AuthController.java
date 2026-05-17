@@ -6,6 +6,8 @@ import com.cowork.auth.dto.SsoProfileResponse;
 import com.cowork.auth.dto.SsoRegisterRequest;
 import com.cowork.auth.dto.TokenResponse;
 import com.cowork.common.ApiResponse;
+import com.cowork.common.BusinessException;
+import com.cowork.common.ErrorCode;
 import com.cowork.consent.PolicyConsentService;
 import com.cowork.user.User;
 import com.cowork.user.UserRepository;
@@ -23,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -320,9 +323,14 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 토큰 없음 또는 만료")
     })
     @GetMapping("/me")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<MeResponse>> me(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
         Long userId = Long.parseLong(userDetails.getUsername());
-        User user = userRepository.findById(userId).orElseThrow();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         PolicyConsentService.ConsentStatus consentStatus = policyConsentService.getStatus(user.getId());
         return ResponseEntity.ok(ApiResponse.ok(new MeResponse(user.getId(), user.getName(), user.getEmail(),
                 user.getOrganization().getId(), user.getOrganization().getName(),
